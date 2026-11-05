@@ -46,22 +46,30 @@
 
   <div class="max-w-3xl mx-auto px-4 mt-8">
     <!-- Header -->
-    <header class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6 text-center">
-      <span id="gradeBadgeDisplay" class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full mb-2">ثاني متوسط - مادة المهارات الرقمية</span>
-      <h1 id="quizTitleDisplay" class="text-2xl font-bold text-slate-800">اختبار عملي: حلقات التكرار (Loops)</h1>
-      <p id="quizDescDisplay" class="text-sm text-slate-500 mt-1">اكتب المقطع البرمجي المطلوب لكل سؤال واضغط على "اختبار الكود" للتحقق من المخرجات قبل الإرسال.</p>
+    <header class="relative bg-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-200/80 mb-6 text-center overflow-hidden">
+      <!-- شريط علوي جمالي متدرج -->
+      <div class="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500"></div>
+
+      <span id="gradeBadgeDisplay" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-bold rounded-full mb-3 border border-emerald-200 shadow-sm">
+        <span>🏷️</span>
+        <span>ثاني متوسط - مادة المهارات الرقمية</span>
+      </span>
+
+      <h1 id="quizTitleDisplay" class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight leading-snug">اختبار عملي: حلقات التكرار (Loops)</h1>
+
+      <p id="quizDescDisplay" class="text-sm sm:text-base text-slate-600 mt-2 max-w-xl mx-auto leading-relaxed">اكتب المقطع البرمجي المطلوب لكل سؤال واضغط على "اختبار الكود" للتحقق من المخرجات قبل الإرسال.</p>
     </header>
 
     <!-- Student Info -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الطالب الرباعي:</label>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الطالب الثلاثي:</label>
           <input type="text" id="studentName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="أدخل اسمك هنا">
         </div>
         <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">الصف / الفصل:</label>
-          <input type="text" id="studentClass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="مثال: ثاني / 1">
+          <label class="block text-sm font-semibold text-slate-700 mb-1"> الفصل:</label>
+          <input type="text" id="studentClass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="مثال: أ / ب / ج">
         </div>
       </div>
     </div>
@@ -80,9 +88,9 @@
     </div>
 
     <!-- Link to Admin (Optional for teacher) -->
-    <div class="text-center mt-6">
+    <!-- <div class="text-center mt-6">
       <a href="admin.html" class="text-xs text-slate-400 hover:text-slate-600 underline">⚙️ لوحة تحكم المعلم وإعدادات الأسئلة</a>
-    </div>
+    </div> -->
   </div>
 
   <script>
@@ -116,12 +124,12 @@
             <h2 class="text-lg font-bold text-slate-800">${q.title}</h2>
             <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-semibold">${q.score} ${q.score > 2 ? 'درجات' : (q.score === 2 ? 'درجتان' : 'درجة واحدة')}</span>
           </div>
-          <p class="text-sm text-slate-600 mb-3 leading-relaxed">
+          <p class="text-base md:text-lg text-slate-700 mb-3 leading-relaxed">
             ${q.description}
           </p>
 
           <label class="block text-xs font-semibold text-slate-500 mb-1">محرر بايثون:</label>
-          <textarea id="editor_${q.id}" rows="6" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full p-3 bg-slate-900 text-emerald-400 rounded-lg text-sm border-0 focus:ring-2 focus:ring-emerald-500" placeholder="${q.placeholder || '# اكتب الكود هنا'}"></textarea>
+          <textarea id="editor_${q.id}" rows="6" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full p-3 bg-slate-900 text-emerald-400 rounded-lg text-base md:text-lg border-0 focus:ring-2 focus:ring-emerald-500 font-mono" placeholder="${q.placeholder || '# اكتب الكود هنا'}"></textarea>
 
           <div class="flex items-center justify-between mt-3">
             <button onclick="testPythonCode('${q.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
@@ -243,13 +251,30 @@ sys.stdout = io.StringIO()
 
     // إرسال البيانات إلى Google Sheets
     async function submitAssessment() {
-      const name = document.getElementById('studentName').value.trim();
-      const sClass = document.getElementById('studentClass').value.trim();
+      const nameInput = document.getElementById('studentName');
+      const classInput = document.getElementById('studentClass');
+      const name = nameInput.value.trim();
+      const sClass = classInput.value.trim();
       const status = document.getElementById('submitStatus');
       const btn = document.getElementById('submitBtn');
 
-      if (!name || !sClass) {
-        alert("يرجى كتابة الاسم والفصل قبل إرسال الاختبار.");
+      // إعادة ضبط الحدود
+      nameInput.classList.remove('border-red-500', 'ring-2', 'ring-red-400');
+      classInput.classList.remove('border-red-500', 'ring-2', 'ring-red-400');
+
+      if (!name) {
+        alert("يرجى كتابة اسم الطالب أولاً.");
+        nameInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
+        nameInput.focus();
+        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      if (!sClass) {
+        alert("يرجى إدخال الفصل.");
+        classInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
+        classInput.focus();
+        classInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
 
