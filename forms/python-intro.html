@@ -577,6 +577,43 @@ function setupAntiCheat() {
       });
     });
 
+    // دعم مفتاح Enter للمسافة البادئة (Indentation) ومفتاح Tab
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        const val = this.value;
+        
+        // معرفة السطر الحالي لحساب المسافة البادئة الموجودة مسبقاً
+        const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+        const currentLine = val.substring(lineStart, start);
+        const matchIndent = currentLine.match(/^[ ]+/);
+        let baseIndent = matchIndent ? matchIndent[0] : '';
+        
+        // إذا كان السطر ينتهي بنقطتين رأسيين (مثل if, for, while, def) نضيف 4 مسافات إضافية
+        const trimmedBefore = currentLine.trimEnd();
+        const extraIndent = (trimmedBefore.endsWith(':') || currentLine.trim().length === 0) ? '    ' : '';
+        const indentToInsert = '\n' + (baseIndent + extraIndent || '    ');
+
+        this.value = val.substring(0, start) + indentToInsert + val.substring(end);
+        this.selectionStart = this.selectionEnd = start + indentToInsert.length;
+        previousValue = this.value;
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        const tabSpaces = '    ';
+        this.value = this.value.substring(0, start) + tabSpaces + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 4;
+        previousValue = this.value;
+        return;
+      }
+    });
+
     el.addEventListener('beforeinput', function(e) {
       if (e.inputType === 'insertFromPaste' || e.inputType === 'insertReplacementText' || e.inputType === 'insertFromDrop') {
         e.preventDefault();
