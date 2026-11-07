@@ -23,7 +23,10 @@
         </div>
         <p class="text-sm text-slate-500 mt-1">تعديل محتوى الاختبار، العناوين، الأسئلة، الدرجات، وتوليد كود Google Sheets تلقائياً.</p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <a href="portal.html" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-xl transition flex items-center gap-1 shadow-sm border border-indigo-200">
+          <span>📚 بوابة الاختبارات</span>
+        </a>
         <a href="form.html" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl transition flex items-center gap-1 shadow-sm">
           <span>📦 استخراج كود index المولد</span>
         </a>
@@ -104,11 +107,18 @@
 
       <!-- Actions -->
       <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 flex-wrap">
           <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow transition">
             💾 حفظ التعديلات
           </button>
-          <button type="button" onclick="resetToDefaults()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition text-sm">
+          <button type="button" onclick="exportQuizJSON()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl transition text-sm flex items-center gap-1.5 shadow-sm">
+            <span>📥</span> تصدير ملف (JSON)
+          </button>
+          <label class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition text-sm flex items-center gap-1.5 cursor-pointer border border-slate-300">
+            <span>📤</span> استيراد اختبار
+            <input type="file" accept=".json" onchange="importQuizJSON(event)" class="hidden">
+          </label>
+          <button type="button" onclick="resetToDefaults()" class="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl transition text-sm border border-rose-200">
             ↺ استعادة الافتراضي
           </button>
         </div>
@@ -410,6 +420,47 @@
       alertBox.classList.remove('hidden');
       document.getElementById('alertMsg').innerText = "تم حفظ جميع التعديلات بنجاح! تم تحديث إعدادات صفحة الاختبار.";
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function exportQuizJSON() {
+      // مزامنة الحقول الحالية أولاً
+      currentConfig.gradeBadge = document.getElementById('gradeBadge').value.trim();
+      currentConfig.quizTitle = document.getElementById('quizTitle').value.trim();
+      currentConfig.durationMinutes = Number(document.getElementById('durationMinutes').value) || 0;
+      currentConfig.quizDesc = document.getElementById('quizDesc').value.trim();
+      currentConfig.scriptUrl = document.getElementById('scriptUrl').value.trim();
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentConfig, null, 2));
+      const downloadAnchor = document.createElement('a');
+      const safeName = (currentConfig.quizTitle || 'quiz').replace(/[\s\/\\:*?"<>|]/g, '_');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `${safeName}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importQuizJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          if (imported && imported.questions && Array.isArray(imported.questions)) {
+            currentConfig = imported;
+            initForm();
+            alert("تم استيراد بيانات الاختبار بنجاح! لا تنسَ الضغط على 'حفظ التعديلات'.");
+          } else {
+            alert("الملف المحدد لا يحتوي على تنسيق اختبار صالح.");
+          }
+        } catch(err) {
+          alert("خطأ في قراءة ملف JSON: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
     }
 
     function resetToDefaults() {

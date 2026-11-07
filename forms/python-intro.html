@@ -154,6 +154,62 @@
     let totalPossibleScore = 0;
     let quizTimerInterval = null;
 
+    // المؤثرات الصوتية التفاعلية عبر Web Audio API
+    const AudioFeedback = {
+      ctx: null,
+      getCtx() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+        return this.ctx;
+      },
+      playSuccess() {
+        try {
+          const ctx = this.getCtx();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          const now = ctx.currentTime;
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+          osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+          
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } catch(e) {}
+      },
+      playTick() {
+        try {
+          const ctx = this.getCtx();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          const now = ctx.currentTime;
+          osc.frequency.setValueAtTime(800, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } catch(e) {}
+      }
+    };
+
     // تشغيل مؤقت الاختبار
     function startQuizTimer(minutes) {
       if (!minutes || minutes <= 0) return;
@@ -174,6 +230,10 @@
         if (totalSeconds <= 60) {
           timerDisplay.classList.remove('text-emerald-400');
           timerDisplay.classList.add('text-red-500', 'animate-pulse');
+          // صوت نبضة خفيفة في آخر 10 ثوانٍ
+          if (totalSeconds <= 10 && totalSeconds > 0) {
+            AudioFeedback.playTick();
+          }
         } else if (totalSeconds <= 180) {
           timerDisplay.classList.remove('text-emerald-400');
           timerDisplay.classList.add('text-amber-400');
@@ -314,6 +374,7 @@
       if (isCorrect) {
         badge.className = "text-xs px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold";
         badge.innerText = "إجابة صحيحة ✔";
+        AudioFeedback.playSuccess();
       } else {
         badge.className = "text-xs px-2.5 py-1 rounded bg-red-100 text-red-700 font-semibold";
         badge.innerText = "إجابة غير صحيحة ✖";
@@ -368,6 +429,7 @@
       if (isCorrect) {
         badge.className = "text-xs px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold";
         badge.innerText = "الترتيب صحيح تماماً ✔";
+        AudioFeedback.playSuccess();
       } else {
         badge.className = "text-xs px-2.5 py-1 rounded bg-amber-100 text-amber-800 font-semibold";
         badge.innerText = "الترتيب غير دقيق، حاول مجدداً ✖";
@@ -477,6 +539,7 @@ builtins.input = _custom_mock_input
           badge.className = "text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800";
           badge.innerText = "المخرجات صحيحة تماماً ✔";
           quizResults[qId] = true;
+          AudioFeedback.playSuccess();
         } else {
           badge.className = "text-xs px-2 py-1 rounded bg-amber-100 text-amber-800";
           badge.innerText = "المخرجات لا تطابق المطلوب ✖";
