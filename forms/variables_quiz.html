@@ -650,10 +650,10 @@ function setupAntiCheat() {
         const matchIndent = currentLine.match(/^[ ]+/);
         let baseIndent = matchIndent ? matchIndent[0] : '';
         
-        // إذا كان السطر ينتهي بنقطتين رأسيين (مثل if, for, while, def) نضيف 4 مسافات إضافية
+        // إضافة 4 مسافات فقط وفقط إذا انتهى السطر بنقطتين رأسيين (:)
         const trimmedBefore = currentLine.trimEnd();
-        const extraIndent = (trimmedBefore.endsWith(':') || currentLine.trim().length === 0) ? '    ' : '';
-        const indentToInsert = '\n' + (baseIndent + extraIndent || '    ');
+        const extraIndent = trimmedBefore.endsWith(':') ? '    ' : '';
+        const indentToInsert = '\n' + baseIndent + extraIndent;
 
         this.value = val.substring(0, start) + indentToInsert + val.substring(end);
         this.selectionStart = this.selectionEnd = start + indentToInsert.length;
