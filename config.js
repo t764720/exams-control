@@ -3,6 +3,7 @@ const DEFAULT_CONFIG = {
   gradeBadge: "ثاني متوسط - مادة المهارات الرقمية",
   quizTitle: "اختبار عملي: حلقات التكرار (Loops)",
   quizDesc: "أجب عن الأسئلة التالية واضغط على \"اختبار الحل\" للتحقق قبل الإرسال النهائي.",
+  durationMinutes: 15, // مدة الاختبار بالدقائق (0 تعني بدون وقت محدد)
   scriptUrl: "https://script.google.com/macros/s/AKfycbyFDkm7oNZjv0sEU6-TsYm28nPF-UHaaokoOYhZv1RaEuNmMwMmctSk0meAgAfOchFg/exec",
   questions: [
     {

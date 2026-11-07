@@ -58,6 +58,13 @@
       <h1 id="quizTitleDisplay" class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight leading-snug">اختبار عملي: حلقات التكرار (Loops)</h1>
 
       <p id="quizDescDisplay" class="text-sm sm:text-base text-slate-600 mt-2 max-w-xl mx-auto leading-relaxed">اكتب المقطع البرمجي المطلوب لكل سؤال واضغط على "اختبار الكود" للتحقق من المخرجات قبل الإرسال.</p>
+
+      <!-- Timer Box -->
+      <div id="timerContainer" class="hidden mt-4 inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl shadow-inner font-mono text-base sm:text-lg border border-slate-700">
+        <span class="text-lg">⏳</span>
+        <span class="font-sans text-xs text-slate-300 font-semibold">الوقت المتبقي:</span>
+        <span id="timerDisplay" class="font-bold text-emerald-400 tracking-widest">00:00</span>
+      </div>
     </header>
 
     <!-- Student Info -->
@@ -119,13 +126,52 @@
       "requiredKeyword": "num1 أو num2 أو total",
       "expectedOutput": "15"
     }
-  ]
+  ],
+  "durationMinutes": 15
 };
     const SCRIPT_URL = QUIZ_CONFIG.scriptUrl;
 
     let pyodide = null;
     let quizResults = {}; // تخزين صحة حل كل سؤال بحسب id
     let totalPossibleScore = 0;
+    let quizTimerInterval = null;
+
+    // تشغيل مؤقت الاختبار
+    function startQuizTimer(minutes) {
+      if (!minutes || minutes <= 0) return;
+
+      const timerContainer = document.getElementById('timerContainer');
+      const timerDisplay = document.getElementById('timerDisplay');
+      if (!timerContainer || !timerDisplay) return;
+
+      timerContainer.classList.remove('hidden');
+
+      let totalSeconds = minutes * 60;
+
+      function updateDisplay() {
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        timerDisplay.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+        if (totalSeconds <= 60) {
+          timerDisplay.classList.remove('text-emerald-400');
+          timerDisplay.classList.add('text-red-500', 'animate-pulse');
+        } else if (totalSeconds <= 180) {
+          timerDisplay.classList.remove('text-emerald-400');
+          timerDisplay.classList.add('text-amber-400');
+        }
+
+        if (totalSeconds <= 0) {
+          clearInterval(quizTimerInterval);
+          alert("⏱️ انتهى وقت الاختبار المخصص! سيتم إرسال إجاباتك الآن تلقائياً.");
+          submitAssessment(true);
+        }
+        totalSeconds--;
+      }
+
+      updateDisplay();
+      quizTimerInterval = setInterval(updateDisplay, 1000);
+    }
 
     // تهيئة واجهة الاختبار من الإعدادات
     function renderQuizUI() {
@@ -410,11 +456,11 @@ sys.stdout = io.StringIO()
     }
 
     // إرسال البيانات إلى Google Sheets
-    async function submitAssessment() {
+    async function submitAssessment(isAutoSubmit = false) {
       const nameInput = document.getElementById('studentName');
       const classInput = document.getElementById('studentClass');
-      const name = nameInput.value.trim();
-      const sClass = classInput.value.trim();
+      let name = nameInput.value.trim();
+      let sClass = classInput.value.trim();
       const status = document.getElementById('submitStatus');
       const btn = document.getElementById('submitBtn');
 
@@ -423,19 +469,31 @@ sys.stdout = io.StringIO()
       classInput.classList.remove('border-red-500', 'ring-2', 'ring-red-400');
 
       if (!name) {
-        alert("يرجى كتابة اسم الطالب أولاً.");
-        nameInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
-        nameInput.focus();
-        nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
+        if (isAutoSubmit) {
+          name = "طالب (انتهى الوقت ولم يدخل اسمه)";
+        } else {
+          alert("يرجى كتابة اسم الطالب أولاً.");
+          nameInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
+          nameInput.focus();
+          nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
       }
 
       if (!sClass) {
-        alert("يرجى إدخال الفصل.");
-        classInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
-        classInput.focus();
-        classInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
+        if (isAutoSubmit) {
+          sClass = "-";
+        } else {
+          alert("يرجى إدخال الفصل.");
+          classInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
+          classInput.focus();
+          classInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+
+      if (quizTimerInterval) {
+        clearInterval(quizTimerInterval);
       }
 
       btn.disabled = true;
@@ -662,6 +720,7 @@ document.addEventListener('keydown', function (e) {
 
 // تشغيل بناء الواجهة عند تحميل الصفحة
 renderQuizUI();
+startQuizTimer(Number(QUIZ_CONFIG.durationMinutes) || 0);
   </script>
 </body>
 </html>
