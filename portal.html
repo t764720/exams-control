@@ -58,13 +58,20 @@
   </div>
 
   <script>
-    const QUIZZES = [
+    let allQuizzes = [
+      {
+        file: "forms/operators.html",
+        title: "نشاط: المعاملات في بايثون",
+        grade: "مادة المهارات الرقمية",
+        desc: "تطبيق عملي لاختبار وفهم المعاملات الحسابية والمنطقية في بايثون.",
+        duration: 15,
+        icon: "➕"
+      },
       {
         file: "forms/loops_quiz.html",
         title: "اختبار عملي: حلقات التكرار (Loops)",
         grade: "ثاني متوسط - مادة المهارات الرقمية",
         desc: "اختبار عملي لكتابة حلقات التكرار for و while مع فحص وتصحيح الكود برمجياً.",
-        qCount: 2,
         duration: 15,
         icon: "🔁"
       },
@@ -73,7 +80,6 @@
         title: "نشاط : إدخال البيانات (input)",
         grade: "أول متوسط - مادة المهارات الرقمية",
         desc: "نشاط تفاعلي لاستقبال المدخلات وحساب العمليات البرمجية بلغة بايثون.",
-        qCount: 1,
         duration: 15,
         icon: "⌨️"
       },
@@ -82,7 +88,6 @@
         title: "نشاط : الحلقات المتداخلة (Nested Loops)",
         grade: "ثاني متوسط - مادة المهارات الرقمية",
         desc: "تطبيق عملي لمحاكاة الساعة الرقمية والجداول باستخدام الحلقات المتداخلة.",
-        qCount: 1,
         duration: 15,
         icon: "⏰"
       },
@@ -91,7 +96,6 @@
         title: "نشاط عملي: القوائم المتداخلة",
         grade: "ثالث متوسط - مادة المهارات الرقمية",
         desc: "التعامل مع المصفوفات والقوائم ثنائية الأبعاد واستخراج البيانات منها.",
-        qCount: 1,
         duration: 15,
         icon: "📑"
       },
@@ -100,7 +104,6 @@
         title: "نشاط عملي: المتغيرات والأنواع",
         grade: "أول متوسط - مادة المهارات الرقمية",
         desc: "تعريف المتغيرات النصية والعددية وتطبيق العمليات الحسابية الأساسية.",
-        qCount: 2,
         duration: 15,
         icon: "📦"
       },
@@ -109,11 +112,46 @@
         title: "نشاط : مقدمة في البرمجة بلغة بايثون",
         grade: "أول متوسط - مادة المهارات الرقمية",
         desc: "الأساسيات والمفاهيم الأولية لجمل الطباعة والمتغيرات البسيطة.",
-        qCount: 3,
         duration: 15,
         icon: "🐍"
       }
     ];
+
+    // جلب أي اختبارات منشورة حديثاً تلقائياً من GitHub API
+    async function loadQuizzesFromGitHub() {
+      try {
+        const repoOwner = "t764720";
+        const repoName = "exams-control";
+        const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms`);
+        if (res.ok) {
+          const files = await res.json();
+          const existingFiles = new Set(allQuizzes.map(q => q.file.replace(/^forms\//, '')));
+
+          const newQuizzes = [];
+          for (const item of files) {
+            if (item.type === 'file' && item.name.endsWith('.html') && !existingFiles.has(item.name)) {
+              // اسم مقروء من اسم الملف
+              const cleanName = decodeURIComponent(item.name.replace(/\.html$/i, '')).replace(/[-_]/g, ' ');
+              newQuizzes.push({
+                file: `forms/${item.name}`,
+                title: cleanName,
+                grade: "مادة المهارات الرقمية (منشور حديثاً)",
+                desc: "اختبار متاح للطلاب عبر بوابة الاختبارات.",
+                duration: 15,
+                icon: "📝"
+              });
+            }
+          }
+
+          if (newQuizzes.length > 0) {
+            allQuizzes = [...newQuizzes, ...allQuizzes];
+            renderQuizzes(allQuizzes);
+          }
+        }
+      } catch (e) {
+        console.log("Could not auto-fetch from GitHub API:", e);
+      }
+    }
 
     function renderQuizzes(list) {
       const grid = document.getElementById('quizzesGrid');
@@ -186,7 +224,7 @@
 
     function filterQuizzes() {
       const query = document.getElementById('searchInput').value.trim().toLowerCase();
-      const filtered = QUIZZES.filter(q => 
+      const filtered = allQuizzes.filter(q => 
         q.title.toLowerCase().includes(query) || 
         q.grade.toLowerCase().includes(query) || 
         q.desc.toLowerCase().includes(query)
@@ -194,8 +232,9 @@
       renderQuizzes(filtered);
     }
 
-    // التهيئة المبدئية
-    renderQuizzes(QUIZZES);
+    // التهيئة المبدئية والتحميل التلقائي
+    renderQuizzes(allQuizzes);
+    loadQuizzesFromGitHub();
   </script>
 </body>
 </html>
