@@ -53,6 +53,50 @@
       </div>
     </div>
 
+    <!-- Quick GitHub Direct Publisher -->
+    <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-6 rounded-2xl shadow-md border border-slate-800 mb-6">
+      <div class="flex items-center justify-between mb-3 pb-3 border-b border-slate-800">
+        <h3 class="text-base font-bold flex items-center gap-2">
+          <span>🚀</span> النشر المباشر إلى GitHub Pages (تلقائياً بدون تنزيل أو سحب)
+        </h3>
+        <span class="text-[11px] bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full font-semibold border border-emerald-500/30">
+          تلقائي ومباشر
+        </span>
+      </div>
+      <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+        سيتم رفع هذا الاختبار مباشرة إلى مجلد <code class="bg-slate-800 px-2 py-0.5 rounded text-emerald-400 font-mono">forms/</code> على مستودعك، وسيكون متاحاً للطلاب فوراً عبر الرابط العام.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">اسم ملف الاختبار (باللغة الإنجليزية):</label>
+          <div class="flex items-center">
+            <span class="px-2 py-2 bg-slate-800 text-slate-400 text-xs rounded-r-lg border border-l-0 border-slate-700 font-mono">forms/</span>
+            <input type="text" id="targetFileName" placeholder="مثال: final-exam" class="w-full px-3 py-2 bg-slate-800 text-white text-xs border border-slate-700 rounded-l-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+            <span class="px-2 py-2 bg-slate-800 text-slate-400 text-xs rounded-l-none border border-r-0 border-slate-700 font-mono">.html</span>
+          </div>
+        </div>
+
+        <div class="md:col-span-2">
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-300">رمز الوصول الشخصي (GitHub Personal Access Token):</label>
+            <a href="https://github.com/settings/tokens/new" target="_blank" class="text-[11px] text-emerald-400 hover:underline">
+              🔑 إنشاء رمز جديد (اختر صلاحية repo) ↗
+            </a>
+          </div>
+          <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" class="w-full px-3 py-2 bg-slate-800 text-white text-xs border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+          <span class="text-[10px] text-slate-400 mt-1 block">يُحفظ الرمز محلياً في متصفحك أنت فقط ولا يراه أي شخص آخر.</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <button type="button" id="publishBtn" onclick="publishDirectToGitHub()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 shadow-lg">
+          <span>🚀</span> نشر الاختبار إلى GitHub الآن
+        </button>
+        <div id="publishStatus" class="text-xs font-semibold hidden"></div>
+      </div>
+    </div>
+
     <!-- Generated Code Box -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-3 border-b">
@@ -102,6 +146,110 @@
     }
 
     document.getElementById('generatedCodeArea').value = generateStandaloneCode();
+
+    // تهيئة حقول النشر المباشر لـ GitHub
+    const savedToken = localStorage.getItem('gh_teacher_token') || '';
+    if (savedToken) {
+      document.getElementById('ghToken').value = savedToken;
+    }
+    const defaultSlug = (config.quizTitle || 'new_quiz')
+      .toLowerCase()
+      .replace(/[\s\/\\:*?"<>|]/g, '-')
+      .replace(/--+/g, '-')
+      .replace(/^-|-$/g, '') || 'quiz';
+    document.getElementById('targetFileName').value = defaultSlug;
+
+    async function publishDirectToGitHub() {
+      let fileName = document.getElementById('targetFileName').value.trim();
+      const token = document.getElementById('ghToken').value.trim();
+      const btn = document.getElementById('publishBtn');
+      const status = document.getElementById('publishStatus');
+
+      if (!fileName) {
+        alert("يرجى كتابة اسم الملف (مثال: quiz-loops).");
+        document.getElementById('targetFileName').focus();
+        return;
+      }
+      if (!token) {
+        alert("يرجى إدخال رمز الوصول الشخصي (GitHub Token) لإتمام النشر التلقائي.");
+        document.getElementById('ghToken').focus();
+        return;
+      }
+
+      // حفظ الرمز محلياً لراحة المعلم في المرات القادمة
+      localStorage.setItem('gh_teacher_token', token);
+
+      // تنظيف اسم الملف
+      fileName = fileName.replace(/\.html$/i, '').trim() + '.html';
+      const repoOwner = "t764720";
+      const repoName = "exams-control";
+      const filePath = `forms/${fileName}`;
+      const fileContent = document.getElementById('generatedCodeArea').value;
+
+      btn.disabled = true;
+      btn.innerHTML = `<span>⏳</span> جاري النشر إلى GitHub...`;
+      status.classList.remove('hidden');
+      status.className = "text-xs font-semibold text-blue-300";
+      status.innerText = "يتم الآن التواصل مع GitHub API لرفع الاختبار...";
+
+      try {
+        // 1. فحص ما إذا كان الملف موجوداً مسبقاً لجلب sha (في حال الرغبة في التحديث)
+        let sha = null;
+        const checkUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+        const checkRes = await fetch(checkUrl, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json"
+          }
+        });
+        if (checkRes.ok) {
+          const fileData = await checkRes.json();
+          sha = fileData.sha;
+        }
+
+        // 2. تشفير المحتوى بـ Base64 بالطريقة الآمنة لـ UTF-8
+        const utf8Bytes = new TextEncoder().encode(fileContent);
+        let binaryStr = '';
+        utf8Bytes.forEach(b => binaryStr += String.fromCharCode(b));
+        const base64Content = btoa(binaryStr);
+
+        // 3. إرسال أمر الإنشاء/التحديث (PUT)
+        const putBody = {
+          message: `Add/Update quiz: ${fileName} via Exams Control Generator`,
+          content: base64Content
+        };
+        if (sha) putBody.sha = sha;
+
+        const putRes = await fetch(checkUrl, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(putBody)
+        });
+
+        if (!putRes.ok) {
+          const errData = await putRes.json();
+          throw new Error(errData.message || "فشل الاتصال بـ GitHub");
+        }
+
+        const publicUrl = `https://${repoOwner}.github.io/${repoName}/${filePath}`;
+        status.className = "text-xs font-bold text-emerald-400";
+        status.innerHTML = `✔ تم النشر بنجاح إلى GitHub! <a href="${publicUrl}" target="_blank" class="underline text-emerald-300 ml-1">فتح الاختبار ↗</a>`;
+        btn.innerHTML = `<span>✔</span> تم النشر بنجاح`;
+
+        alert(`تم رفع الاختبار بنجاح إلى GitHub Pages!\n\nرابط الاختبار المباشر:\n${publicUrl}\n\n(قد يستغرق ظهور الرابط العام دقيقة واحدة ليقوم GitHub بتحديث الخوادم).`);
+
+      } catch (err) {
+        status.className = "text-xs font-bold text-rose-400";
+        status.innerText = `حدث خطأ أثناء النشر: ${err.message}`;
+        btn.disabled = false;
+        btn.innerHTML = `<span>🚀</span> إعادة محاولة النشر`;
+        alert("خطأ في النشر إلى GitHub: " + err.message + "\nتأكد من صحة الرمز (Token) وتوفر صلاحية 'repo' فيه.");
+      }
+    }
 
     function copyGeneratedHTML() {
       const ta = document.getElementById('generatedCodeArea');
