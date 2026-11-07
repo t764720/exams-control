@@ -405,12 +405,30 @@
         }
       }
 
-      // تحويل مخرجات print إلى نص داخل جافاسكربت
+      // تحويل مخرجات print ودعم مدخلات input() التلقائية
       try {
+        const mockInputsRaw = (q.mockInputs !== undefined && q.mockInputs !== null) ? String(q.mockInputs) : "";
+        const mockInputsList = mockInputsRaw.split(/\r?\n/).map(s => s.trimEnd());
+        
+        pyodide.globals.set("_js_mock_inputs", mockInputsList);
+
         await pyodide.runPythonAsync(`
 import sys
 import io
+import builtins
+
 sys.stdout = io.StringIO()
+
+_inputs_queue = list(_js_mock_inputs)
+
+def _custom_mock_input(prompt=""):
+    if prompt:
+        sys.stdout.write(str(prompt))
+    if len(_inputs_queue) > 0:
+        return _inputs_queue.pop(0)
+    return ""
+
+builtins.input = _custom_mock_input
         `);
 
         // تشغيل كود الطالب
