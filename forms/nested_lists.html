@@ -497,6 +497,7 @@ sys.stdout = io.StringIO()
       const payload = {
         studentName: name,
         studentClass: sClass,
+        quizTitle: QUIZ_CONFIG.quizTitle || 'اختبار بدون عنوان',
         timestamp: new Date().toISOString()
       };
 

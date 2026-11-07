@@ -437,31 +437,52 @@
       rowArray.push("data.totalScore || 0");
 
       const code = `/**
- * Google Apps Script لتسجيل نتائج الطلاب لاختبار المهارات الرقمية
- * تم التوليد تلقائياً لعدد (${questions.length}) أسئلة متنوعة (برمجة، اختيار من متعدد، ترتيب خطوات)
+ * Google Apps Script لتسجيل نتائج الطلاب لاختبارات المهارات الرقمية (الشيت الموحد)
+ * ينشئ تلقائياً ورقة عمل (تبويب Tab) لكل اختبار باسمه داخل نفس ملف الشيت
  */
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  lock.tryLock(10000);
+  lock.tryLock(15000);
 
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     var data = JSON.parse(e.postData.contents);
 
-    // إنشاء صف العناوين تلقائياً إذا كانت الورقة جديدة وفارغة
+    // اسم الاختبار ليكون عنوان الورقة/التبويب (مع تنظيف الرموز غير المسموح بها في أسماء الأوراق)
+    var rawTitle = (data.quizTitle || 'النتائج العامة').trim();
+    var sheetName = rawTitle.replace(/[\\[\\]\\*\\?\\/\\\\:]/g, '-').substring(0, 50);
+
+    // البحث عن الورقة الخاصة بهذا الاختبار أو إنشاؤها إن لم تكن موجودة
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+
+    // عناوين الأعمدة
+    var headers = [
+      ${headersArray.join(', ')}
+    ];
+
+    // إذا كانت الورقة جديدة وفارغة ننشئ صف العناوين وننسقه
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        ${headersArray.join(', ')}
-      ]);
-      // تنسيق رأس الجدول
-      sheet.getRange(1, 1, 1, ${headersArray.length}).setFontWeight("bold").setBackground("#e2e8f0");
+      sheet.appendRow(headers);
+      var headerRange = sheet.getRange(1, 1, 1, headers.length);
+      headerRange.setFontWeight("bold")
+                 .setBackground("#10b981")
+                 .setFontColor("#ffffff")
+                 .setHorizontalAlignment("center");
+      sheet.setFrozenRows(1);
     }
 
     // إضافة سطر إجابة الطالب
     sheet.appendRow([
       ${rowArray.join(',\n      ')}
     ]);
+
+    // محاذاة النص لليمين وضبط التنسيق
+    var lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 1, 1, headers.length).setHorizontalAlignment("center");
 
     return ContentService.createTextOutput(JSON.stringify({ "result": "success" }))
       .setMimeType(ContentService.MimeType.JSON);
