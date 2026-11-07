@@ -127,7 +127,7 @@
 
   <script>
     // ضع هنا رابط Web App الخاص بـ Google Apps Script
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyFDkm7oNZjv0sEU6-TsYm28nPF-UHaaokoOYhZv1RaEuNmMwMmctSk0meAgAfOchFg/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6ZYOKioNLazDk1vjS-6O6yIOBoj0q2ypbS_ekEsOKVSfjZba2FMEoVdchSjIxbg6x7Q/exec";
 
     let pyodide = null;
     let results = {
@@ -252,6 +252,7 @@ sys.stdout = io.StringIO()
       const payload = {
         studentName: name,
         studentClass: sClass,
+        quizTitle: "اختبار عملي: حلقات التكرار (Loops)",
         forCode: codeFor,
         forSuccess: results.forValid,
         whileCode: codeWhile,
