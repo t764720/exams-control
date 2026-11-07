@@ -4,6 +4,7 @@ const DEFAULT_CONFIG = {
   quizTitle: "اختبار عملي: حلقات التكرار (Loops)",
   quizDesc: "أجب عن الأسئلة التالية واضغط على \"اختبار الحل\" للتحقق قبل الإرسال النهائي.",
   durationMinutes: 15, // مدة الاختبار بالدقائق (0 تعني بدون وقت محدد)
+  maxSubmissions: 1, // الحد الأقصى للمحاولات لكل طالب (0 تعني محاولات غير محدودة)
   scriptUrl: "https://script.google.com/macros/s/AKfycbz6ZYOKioNLazDk1vjS-6O6yIOBoj0q2ypbS_ekEsOKVSfjZba2FMEoVdchSjIxbg6x7Q/exec",
   questions: [
     {

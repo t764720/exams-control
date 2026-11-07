@@ -127,7 +127,8 @@
       "expectedOutput": "15"
     }
   ],
-  "durationMinutes": 15
+  "durationMinutes": 15,
+  "maxSubmissions": 1
 };
     const SCRIPT_URL = QUIZ_CONFIG.scriptUrl;
 
@@ -536,6 +537,38 @@ builtins.input = _custom_mock_input
       }
     }
 
+    // التحقق من سجل محاولات الطالب
+    function getSubmissionStorageKey() {
+      const cleanTitle = (QUIZ_CONFIG.quizTitle || 'default').replace(/[\s\/\\:*?"<>|]/g, '_');
+      return `quiz_submissions_${cleanTitle}`;
+    }
+
+    function checkSubmissionLimits() {
+      const maxAllowed = (QUIZ_CONFIG.maxSubmissions !== undefined) ? Number(QUIZ_CONFIG.maxSubmissions) : 1;
+      if (maxAllowed === 0) return; // محاولات غير محدودة
+
+      const count = Number(localStorage.getItem(getSubmissionStorageKey()) || 0);
+      if (count >= maxAllowed) {
+        // حظر الإرسال وإظهار رسالة إغلاق
+        const submitBtn = document.getElementById('submitBtn');
+        const status = document.getElementById('submitStatus');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.className = "w-full md:w-1/2 py-3 bg-slate-300 text-slate-500 font-bold rounded-xl cursor-not-allowed shadow-none";
+          submitBtn.innerText = "تم استنفاذ المحاولات المسموحة لهذا الاختبار";
+        }
+        if (status) {
+          status.classList.remove('hidden');
+          status.className = "mt-3 text-sm font-bold text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200";
+          status.innerHTML = `⚠️ لقد قمت بإرسال إجابات هذا الاختبار مسبقاً (${count} من ${maxAllowed} محاولة). تم رصد درجتك لدى المعلم.`;
+        }
+        // تعطيل المؤقت إن كان يعمل
+        if (quizTimerInterval) clearInterval(quizTimerInterval);
+        const timerContainer = document.getElementById('timerContainer');
+        if (timerContainer) timerContainer.classList.add('hidden');
+      }
+    }
+
     // إرسال البيانات إلى Google Sheets
     async function submitAssessment(isAutoSubmit = false) {
       const nameInput = document.getElementById('studentName');
@@ -661,6 +694,18 @@ builtins.input = _custom_mock_input
         status.className = "mt-3 text-sm font-semibold text-emerald-600";
         status.innerText = `تم إرسال الاختبار بنجاح! درجتك التقديرية: ${totalEarnedScore} من ${totalPossibleScore}`;
         btn.innerText = "تم الإرسال";
+
+        // تسجيل المحاولة محلياً
+        const maxAllowed = (QUIZ_CONFIG.maxSubmissions !== undefined) ? Number(QUIZ_CONFIG.maxSubmissions) : 1;
+        if (maxAllowed > 0) {
+          const currentCount = Number(localStorage.getItem(getSubmissionStorageKey()) || 0) + 1;
+          localStorage.setItem(getSubmissionStorageKey(), currentCount);
+          if (currentCount >= maxAllowed) {
+            btn.disabled = true;
+            btn.className = "w-full md:w-1/2 py-3 bg-slate-300 text-slate-500 font-bold rounded-xl cursor-not-allowed shadow-none";
+            btn.innerText = "تم استنفاذ المحاولات المسموحة";
+          }
+        }
       } catch (e) {
         status.className = "mt-3 text-sm font-semibold text-red-600";
         status.innerText = "حدث خطأ أثناء الإرسال. يرجى مراجعة المعلم.";
@@ -803,6 +848,7 @@ document.addEventListener('keydown', function (e) {
 // تشغيل بناء الواجهة عند تحميل الصفحة
 renderQuizUI();
 startQuizTimer(Number(QUIZ_CONFIG.durationMinutes) || 0);
+checkSubmissionLimits();
   </script>
 </body>
 </html>
