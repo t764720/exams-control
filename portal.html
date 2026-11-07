@@ -58,95 +58,98 @@
   </div>
 
   <script>
-    let allQuizzes = [
-      {
-        file: "forms/operators.html",
+    // قائمة تفاصيل الاختبارات المعروفة (عناوين وأوصاف مخصصة)
+    const KNOWN_METADATA = {
+      "operators.html": {
         title: "نشاط: المعاملات في بايثون",
         grade: "مادة المهارات الرقمية",
         desc: "تطبيق عملي لاختبار وفهم المعاملات الحسابية والمنطقية في بايثون.",
         duration: 15,
         icon: "➕"
       },
-      {
-        file: "forms/loops_quiz.html",
+      "loops_quiz.html": {
         title: "اختبار عملي: حلقات التكرار (Loops)",
         grade: "ثاني متوسط - مادة المهارات الرقمية",
         desc: "اختبار عملي لكتابة حلقات التكرار for و while مع فحص وتصحيح الكود برمجياً.",
         duration: 15,
         icon: "🔁"
       },
-      {
-        file: "forms/input-quiz.html",
+      "input-quiz.html": {
         title: "نشاط : إدخال البيانات (input)",
         grade: "أول متوسط - مادة المهارات الرقمية",
         desc: "نشاط تفاعلي لاستقبال المدخلات وحساب العمليات البرمجية بلغة بايثون.",
         duration: 15,
         icon: "⌨️"
       },
-      {
-        file: "forms/nested_loops.html",
+      "nested_loops.html": {
         title: "نشاط : الحلقات المتداخلة (Nested Loops)",
         grade: "ثاني متوسط - مادة المهارات الرقمية",
         desc: "تطبيق عملي لمحاكاة الساعة الرقمية والجداول باستخدام الحلقات المتداخلة.",
         duration: 15,
         icon: "⏰"
       },
-      {
-        file: "forms/nested_lists.html",
+      "nested_lists.html": {
         title: "نشاط عملي: القوائم المتداخلة",
         grade: "ثالث متوسط - مادة المهارات الرقمية",
         desc: "التعامل مع المصفوفات والقوائم ثنائية الأبعاد واستخراج البيانات منها.",
         duration: 15,
         icon: "📑"
       },
-      {
-        file: "forms/variables_quiz.html",
+      "variables_quiz.html": {
         title: "نشاط عملي: المتغيرات والأنواع",
         grade: "أول متوسط - مادة المهارات الرقمية",
         desc: "تعريف المتغيرات النصية والعددية وتطبيق العمليات الحسابية الأساسية.",
         duration: 15,
         icon: "📦"
       },
-      {
-        file: "forms/python-intro.html",
+      "python-intro.html": {
         title: "نشاط : مقدمة في البرمجة بلغة بايثون",
         grade: "أول متوسط - مادة المهارات الرقمية",
         desc: "الأساسيات والمفاهيم الأولية لجمل الطباعة والمتغيرات البسيطة.",
         duration: 15,
         icon: "🐍"
       }
-    ];
+    };
 
-    // جلب أي اختبارات منشورة حديثاً تلقائياً من GitHub API
+    let allQuizzes = Object.keys(KNOWN_METADATA).map(fileName => ({
+      file: `forms/${fileName}`,
+      ...KNOWN_METADATA[fileName]
+    }));
+
+    // جلب القائمة الحقيقية المباشرة من مجلد forms على GitHub
+    // بحيث إذا تم حذف أو إضافة أي اختبار يتم تحديث البوابة بدقة متطابقة
     async function loadQuizzesFromGitHub() {
       try {
         const repoOwner = "t764720";
         const repoName = "exams-control";
-        const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms`);
+        const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms?t=${Date.now()}`);
+        
         if (res.ok) {
-          const files = await res.json();
-          const existingFiles = new Set(allQuizzes.map(q => q.file.replace(/^forms\//, '')));
+          const remoteFiles = await res.json();
+          const activeHtmlFiles = remoteFiles.filter(item => item.type === 'file' && item.name.endsWith('.html'));
 
-          const newQuizzes = [];
-          for (const item of files) {
-            if (item.type === 'file' && item.name.endsWith('.html') && !existingFiles.has(item.name)) {
-              // اسم مقروء من اسم الملف
-              const cleanName = decodeURIComponent(item.name.replace(/\.html$/i, '')).replace(/[-_]/g, ' ');
-              newQuizzes.push({
-                file: `forms/${item.name}`,
-                title: cleanName,
-                grade: "مادة المهارات الرقمية (منشور حديثاً)",
+          const syncedList = activeHtmlFiles.map(item => {
+            const fileName = item.name;
+            if (KNOWN_METADATA[fileName]) {
+              return {
+                file: `forms/${fileName}`,
+                ...KNOWN_METADATA[fileName]
+              };
+            } else {
+              const cleanTitle = decodeURIComponent(fileName.replace(/\.html$/i, '')).replace(/[-_]/g, ' ');
+              return {
+                file: `forms/${fileName}`,
+                title: cleanTitle,
+                grade: "مادة المهارات الرقمية",
                 desc: "اختبار متاح للطلاب عبر بوابة الاختبارات.",
                 duration: 15,
                 icon: "📝"
-              });
+              };
             }
-          }
+          });
 
-          if (newQuizzes.length > 0) {
-            allQuizzes = [...newQuizzes, ...allQuizzes];
-            renderQuizzes(allQuizzes);
-          }
+          allQuizzes = syncedList;
+          renderQuizzes(allQuizzes);
         }
       } catch (e) {
         console.log("Could not auto-fetch from GitHub API:", e);
