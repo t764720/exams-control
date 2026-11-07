@@ -80,12 +80,25 @@
         <div class="md:col-span-2">
           <div class="flex items-center justify-between mb-1">
             <label class="block text-xs font-semibold text-slate-300">رمز الوصول الشخصي (GitHub Personal Access Token):</label>
-            <a href="https://github.com/settings/tokens/new" target="_blank" class="text-[11px] text-emerald-400 hover:underline">
-              🔑 إنشاء رمز جديد (اختر صلاحية repo) ↗
-            </a>
+            <div class="flex items-center gap-2">
+              <span id="tokenStatusBadge" class="text-[11px] font-bold text-slate-400"></span>
+              <a href="https://github.com/settings/tokens/new" target="_blank" class="text-[11px] text-emerald-400 hover:underline">
+                🔑 إنشاء رمز جديد ↗
+              </a>
+            </div>
           </div>
-          <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" class="w-full px-3 py-2 bg-slate-800 text-white text-xs border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
-          <span class="text-[10px] text-slate-400 mt-1 block">يُحفظ الرمز محلياً في متصفحك أنت فقط ولا يراه أي شخص آخر.</span>
+          <div class="relative flex items-center">
+            <input type="password" id="ghToken" oninput="handleTokenInput()" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" class="w-full pl-24 pr-3 py-2 bg-slate-800 text-white text-xs border border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono">
+            <div class="absolute left-1.5 flex items-center gap-1">
+              <button type="button" onclick="toggleTokenVisibility()" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-[11px] text-slate-200 rounded transition" title="إظهار/إخفاء الرمز">
+                👁️
+              </button>
+              <button type="button" onclick="clearSavedToken()" class="px-2 py-1 bg-rose-900/60 hover:bg-rose-800 text-[11px] text-rose-300 rounded transition" title="مسح الرمز المحفوظ">
+                🗑️
+              </button>
+            </div>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-1 block">يُحفظ الرمز بأمان محلياً في متصفحك أنت فقط ولا تحتاجه مجدداً عند كل توليد.</span>
         </div>
       </div>
 
@@ -148,10 +161,44 @@
     document.getElementById('generatedCodeArea').value = generateStandaloneCode();
 
     // تهيئة حقول النشر المباشر لـ GitHub
-    const savedToken = localStorage.getItem('gh_teacher_token') || '';
-    if (savedToken) {
-      document.getElementById('ghToken').value = savedToken;
+    function updateTokenUI() {
+      const savedToken = localStorage.getItem('gh_teacher_token') || '';
+      const tokenInput = document.getElementById('ghToken');
+      const badge = document.getElementById('tokenStatusBadge');
+
+      if (savedToken) {
+        tokenInput.value = savedToken;
+        badge.className = "text-[11px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800";
+        badge.innerText = "🔒 الرمز محفوظ بأمان في جهازك";
+      } else {
+        badge.className = "text-[11px] font-semibold text-amber-400";
+        badge.innerText = "⚠️ غير محفوظ";
+      }
     }
+
+    function handleTokenInput() {
+      const val = document.getElementById('ghToken').value.trim();
+      if (val) {
+        localStorage.setItem('gh_teacher_token', val);
+      }
+      updateTokenUI();
+    }
+
+    function toggleTokenVisibility() {
+      const input = document.getElementById('ghToken');
+      input.type = (input.type === 'password') ? 'text' : 'password';
+    }
+
+    function clearSavedToken() {
+      if (confirm("هل تريد بالتأكيد مسح رمز GitHub المحفوظ من هذا المتصفح؟")) {
+        localStorage.removeItem('gh_teacher_token');
+        document.getElementById('ghToken').value = '';
+        updateTokenUI();
+      }
+    }
+
+    updateTokenUI();
+
     const defaultSlug = (config.quizTitle || 'new_quiz')
       .toLowerCase()
       .replace(/[\s\/\\:*?"<>|]/g, '-')
