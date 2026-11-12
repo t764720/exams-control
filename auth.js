@@ -187,3 +187,4 @@ const TeacherAuth = {
     alert(res.message);
   }
 };
+
