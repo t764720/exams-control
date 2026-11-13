@@ -266,11 +266,21 @@
                 ${qType === 'code' ? '💻 كتابة كود بايثون' : (qType === 'mcq' ? '🔘 اختيار من متعدد' : '🔀 ترتيب خطوات')}
               </span>
             </div>
-            ${currentConfig.questions.length > 1 ? `
-              <button type="button" onclick="deleteQuestion('${q.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold transition flex items-center gap-1">
-                🗑️ حذف هذا السؤال
-              </button>
-            ` : ''}
+            <div class="flex items-center gap-2">
+              <div class="inline-flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <button type="button" onclick="moveQuestion('${q.id}', -1)" ${index === 0 ? 'disabled' : ''} class="px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed border-l border-slate-200" title="رفع السؤال لأعلى">
+                  🔼
+                </button>
+                <button type="button" onclick="moveQuestion('${q.id}', 1)" ${index === currentConfig.questions.length - 1 ? 'disabled' : ''} class="px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed" title="إنزال السؤال لأسفل">
+                  🔽
+                </button>
+              </div>
+              ${currentConfig.questions.length > 1 ? `
+                <button type="button" onclick="deleteQuestion('${q.id}')" class="text-red-500 hover:text-red-700 text-xs font-bold transition flex items-center gap-1 px-2 py-1 rounded hover:bg-red-50">
+                  🗑️ حذف
+                </button>
+              ` : ''}
+            </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -292,9 +302,41 @@
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">نص السؤال والتعليمات (يدعم وسوم HTML مثل &lt;strong&gt; و &lt;code&gt;):</label>
-            <textarea rows="2" onchange="updateQField('${q.id}', 'description', this.value)" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" required>${escapeHtml(q.description)}</textarea>
+          <!-- Description Editor with Visual Toolbar and Live Preview -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <label class="block text-xs font-semibold text-slate-700">
+                نص السؤال والتعليمات:
+              </label>
+              <div class="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 text-xs shadow-sm">
+                <span class="text-[10px] text-slate-400 font-bold px-1">تنسيق سريع:</span>
+                <button type="button" onclick="insertFormatting('${q.id}', '<strong>', '</strong>')" class="px-2 py-0.5 rounded font-bold hover:bg-slate-100 text-slate-700" title="خط عريض">
+                  B
+                </button>
+                <button type="button" onclick="insertFormatting('${q.id}', '<code>', '</code>')" class="px-2 py-0.5 rounded font-mono font-bold hover:bg-slate-100 text-indigo-600" title="كود برمجي">
+                  &lt;/&gt;
+                </button>
+                <button type="button" onclick="insertFormatting('${q.id}', '<span class=\\'text-emerald-600 font-bold\\'>', '</span>')" class="px-2 py-0.5 rounded text-emerald-600 font-bold hover:bg-slate-100" title="نص أخضر مميز">
+                  أخضر
+                </button>
+                <button type="button" onclick="insertFormatting('${q.id}', '<span class=\\'text-blue-600 font-bold\\'>', '</span>')" class="px-2 py-0.5 rounded text-blue-600 font-bold hover:bg-slate-100" title="نص أزرق مميز">
+                  أزرق
+                </button>
+                <button type="button" onclick="insertFormatting('${q.id}', '<br>', '')" class="px-2 py-0.5 rounded text-slate-600 hover:bg-slate-100" title="سطر جديد">
+                  سطر ↵
+                </button>
+              </div>
+            </div>
+
+            <textarea id="descInput_${q.id}" rows="2" oninput="updateQField('${q.id}', 'description', this.value)" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="اكتب نص السؤال والتعليمات..." required>${escapeHtml(q.description)}</textarea>
+
+            <!-- Live Preview -->
+            <div class="bg-indigo-50/40 border border-indigo-100 rounded-xl p-3">
+              <span class="text-[10px] font-bold text-indigo-600 block mb-1">👁️ المعاينة الحية كما ستظهر للطالب:</span>
+              <div id="descPreview_${q.id}" class="text-sm md:text-base text-slate-800 leading-relaxed font-sans">
+                ${q.description || '<span class="text-slate-400 italic">لا يوجد نص للمعاينة بعد...</span>'}
+              </div>
+            </div>
           </div>
 
           ${typeSpecificFields}
@@ -326,7 +368,52 @@
       const q = currentConfig.questions.find(item => item.id === id);
       if (q) {
         q[field] = value;
+        if (field === 'description') {
+          updateDescriptionPreview(id);
+        }
       }
+    }
+
+    function insertFormatting(qId, tagOpen, tagClose) {
+      const textarea = document.getElementById(`descInput_${qId}`);
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const val = textarea.value;
+      const selected = val.substring(start, end) || 'نص';
+      const replacement = tagOpen + selected + tagClose;
+
+      textarea.value = val.substring(0, start) + replacement + val.substring(end);
+      textarea.selectionStart = start + tagOpen.length;
+      textarea.selectionEnd = start + tagOpen.length + selected.length;
+      textarea.focus();
+
+      updateQField(qId, 'description', textarea.value);
+    }
+
+    function updateDescriptionPreview(qId) {
+      const textarea = document.getElementById(`descInput_${qId}`);
+      const preview = document.getElementById(`descPreview_${qId}`);
+      if (textarea && preview) {
+        preview.innerHTML = textarea.value || '<span class="text-slate-400 italic">لا يوجد نص للمعاينة بعد...</span>';
+      }
+    }
+
+    function moveQuestion(id, direction) {
+      const index = currentConfig.questions.findIndex(q => q.id === id);
+      if (index === -1) return;
+
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= currentConfig.questions.length) return;
+
+      const temp = currentConfig.questions[index];
+      currentConfig.questions[index] = currentConfig.questions[newIndex];
+      currentConfig.questions[newIndex] = temp;
+
+      renderQuestions();
+      const el = document.getElementById(`qCard_${id}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function updateQOption(id, optIndex, value) {
