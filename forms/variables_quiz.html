@@ -9,16 +9,100 @@
   <!-- مكتبة Pyodide لتشغيل بايثون مباشرة في المتصفح -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-  
-  
+    
   <style>
     body { font-family: 'Cairo', sans-serif; }
-    textarea { 
-      font-family: 'Consolas', 'Courier New', monospace; 
-      direction: ltr; 
+    /* تنسيق محرر الكود المتقدم مع التلوين وترقيم الأسطر */
+    .code-editor-wrapper {
+      position: relative;
+      background-color: #0f172a; /* slate-900 */
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      overflow: hidden;
+      direction: ltr;
       text-align: left;
-      -webkit-touch-callout: none !important;
     }
+    .editor-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 14px;
+      background-color: #1e293b;
+      border-bottom: 1px solid #334155;
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+    }
+    .editor-content-area {
+      display: flex;
+      position: relative;
+      min-height: 160px;
+    }
+    .line-numbers {
+      width: 40px;
+      padding: 12px 0;
+      background-color: #090d16;
+      color: #475569;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 24px;
+      text-align: center;
+      user-select: none;
+      border-right: 1px solid #1e293b;
+      flex-shrink: 0;
+    }
+    .editor-stage {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+    .editor-highlight-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 12px;
+      margin: 0;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 15px;
+      line-height: 24px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      pointer-events: none;
+      color: #e2e8f0;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .editor-textarea {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 160px;
+      padding: 12px;
+      margin: 0;
+      background: transparent !important;
+      color: transparent !important;
+      caret-color: #34d399 !important; /* emerald-400 */
+      border: 0 !important;
+      outline: none !important;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 15px;
+      line-height: 24px;
+      resize: vertical;
+      white-space: pre-wrap;
+      word-break: break-all;
+      box-sizing: border-box;
+      z-index: 2;
+    }
+    /* Syntax Highlighting Colors */
+    .hl-kw { color: #f43f5e; font-weight: bold; } /* rose-500: def, for, in, if, while... */
+    .hl-builtin { color: #38bdf8; font-weight: bold; } /* sky-400: print, range, len, int, str... */
+    .hl-str { color: #34d399; } /* emerald-400: 'strings' */
+    .hl-num { color: #fbbf24; } /* amber-400: 123 */
+    .hl-comment { color: #64748b; font-style: italic; } /* slate-500: # comment */
+    .hl-op { color: #c084fc; } /* purple-400: : + - * / = == */
     #toastMessage {
       position: fixed;
       bottom: 24px;
@@ -115,7 +199,8 @@
       "description": "اكتب مقطعاً برمجياً بلغة بايثون يقوم بتعريف متغيرين <code>subject</code> لتخزين اسم المادة  <strong>العلوم</strong>  و المتغير<code> score </code> لتخزين الدرجة  <strong>90</strong> ثم اطبعهما على الشاشة.",
       "placeholder": "# اكتب الكود هنا",
       "requiredKeyword": "subjectأو score",
-      "expectedOutput": "العلوم\n90"
+      "expectedOutput": "العلوم\n90",
+      "type": "code"
     },
     {
       "id": "q1793915773041",
@@ -124,7 +209,8 @@
       "description": "اكتب مقطعاً برمجياً بلغة بايثون يقوم بإسناد القيمة <strong>5</strong> إلى المتغير  <code>num1</code> والقيمة <strong>10</strong> إلى المتغير   <code>num2</code>  ثم تعريف متغير <code>total</code> لحساب مجموع <code>num1</code> و  <code>num2</code>  وطباعة الناتج على الشاشة.",
       "placeholder": "# اكتب الكود هنا",
       "requiredKeyword": "num1 أو num2 أو total",
-      "expectedOutput": "15"
+      "expectedOutput": "15",
+      "type": "code"
     }
   ],
   "durationMinutes": 15,
@@ -258,8 +344,21 @@
 
         if (qType === 'code') {
           bodyHTML = `
-            <label class="block text-xs font-semibold text-slate-500 mb-1">محرر بايثون:</label>
-            <textarea id="editor_${q.id}" rows="6" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full p-3 bg-slate-900 text-emerald-400 rounded-lg text-base md:text-lg border-0 focus:ring-2 focus:ring-emerald-500 font-mono" placeholder="${q.placeholder || '# اكتب الكود هنا'}"></textarea>
+            <div class="mb-2">
+              <div class="code-editor-wrapper">
+                <div class="editor-top-bar">
+                  <span class="font-bold">🐍 محرر بايثون التفاعلي</span>
+                  <span class="text-[10px] text-slate-400">يدعم المسافات البادئة تلقائياً (4 مسافات)</span>
+                </div>
+                <div class="editor-content-area">
+                  <div id="lines_${q.id}" class="line-numbers">1</div>
+                  <div class="editor-stage">
+                    <pre id="highlight_${q.id}" class="editor-highlight-layer" aria-hidden="true"></pre>
+                    <textarea id="editor_${q.id}" rows="6" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="editor-textarea" placeholder="${q.placeholder || '# اكتب الكود هنا'}"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="flex items-center justify-between mt-3">
               <button type="button" onclick="testPythonCode('${q.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
@@ -766,6 +865,7 @@ function setupAntiCheat() {
         this.value = val.substring(0, start) + indentToInsert + val.substring(end);
         this.selectionStart = this.selectionEnd = start + indentToInsert.length;
         previousValue = this.value;
+        syncEditor(this);
         return;
       }
 
@@ -777,6 +877,7 @@ function setupAntiCheat() {
         this.value = this.value.substring(0, start) + tabSpaces + this.value.substring(end);
         this.selectionStart = this.selectionEnd = start + 4;
         previousValue = this.value;
+        syncEditor(this);
         return;
       }
     });
@@ -792,6 +893,7 @@ function setupAntiCheat() {
     el.addEventListener('input', function(e) {
       if (e.inputType === 'insertFromPaste' || e.inputType === 'insertReplacementText') {
         this.value = previousValue;
+        syncEditor(this);
         showToast('تم حظر اللصق من الحافظة!', 'warning');
         return;
       }
@@ -800,13 +902,73 @@ function setupAntiCheat() {
       const addedChars = currentVal.length - previousValue.length;
       if (addedChars > 3 && (!e.inputType || e.inputType === 'insertText')) {
         this.value = previousValue;
+        syncEditor(this);
         showToast('تم حظر إدراج النص المنسوخ من شريط الحافظة!', 'warning');
         return;
       }
       
       previousValue = this.value;
+      syncEditor(this);
     });
+
+    el.addEventListener('scroll', function() {
+      const qId = this.id.replace('editor_', '');
+      const hl = document.getElementById(`highlight_${qId}`);
+      if (hl) {
+        hl.scrollTop = this.scrollTop;
+        hl.scrollLeft = this.scrollLeft;
+      }
+    });
+
+    // التهيئة الأولية للمحرر
+    syncEditor(el);
   });
+}
+
+// دالة تلوين وترقيم أسطر محرر بايثون للطالب
+function highlightPythonCode(code) {
+  if (!code) return '';
+  const escape = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  // Regex tokens: comments, strings, keywords, builtins, numbers, operators
+  const tokenRegex = /(#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(def|class|if|elif|else|for|while|break|continue|return|in|not|and|or|is|import|from|as|try|except|finally|pass|lambda|with)\b|\b(print|range|input|len|str|int|float|list|dict|set|tuple|sum|min|max|type|abs|round|open)\b|(\b\d+(?:\.\d+)?\b)|([:+\-*\/%=<>!&|^~]+)/g;
+
+  return code.replace(tokenRegex, (match, comment, str, kw, builtin, num, op) => {
+    if (comment) return `<span class="hl-comment">${escape(comment)}</span>`;
+    if (str) return `<span class="hl-str">${escape(str)}</span>`;
+    if (kw) return `<span class="hl-kw">${escape(kw)}</span>`;
+    if (builtin) return `<span class="hl-builtin">${escape(builtin)}</span>`;
+    if (num) return `<span class="hl-num">${escape(num)}</span>`;
+    if (op) return `<span class="hl-op">${escape(op)}</span>`;
+    return escape(match);
+  });
+}
+
+function syncEditor(textarea) {
+  if (!textarea || !textarea.id || !textarea.id.startsWith('editor_')) return;
+  const qId = textarea.id.replace('editor_', '');
+  const val = textarea.value;
+
+  // 1. تحديث طبقة التلوين
+  const hl = document.getElementById(`highlight_${qId}`);
+  if (hl) {
+    // إضافة \n إضافي في النهاية لضمان تطابق الأسطر مع textarea بدقة عند الضغط على Enter في سطر فارغ
+    hl.innerHTML = highlightPythonCode(val) + (val.endsWith('\n') ? '<br>' : '');
+    hl.scrollTop = textarea.scrollTop;
+    hl.scrollLeft = textarea.scrollLeft;
+  }
+
+  // 2. تحديث ترقيم الأسطر
+  const linesEl = document.getElementById(`lines_${qId}`);
+  if (linesEl) {
+    const lineCount = Math.max(1, val.split('\n').length);
+    let nums = '';
+    for (let i = 1; i <= lineCount; i++) {
+      nums += i + '<br>';
+    }
+    linesEl.innerHTML = nums;
+  }
+}
 }
 
 // 1. منع القائمة المنسدلة للزر الأيمن للماوس (Right Click)

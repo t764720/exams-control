@@ -3,20 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>اختبار المهارات الرقمية: الحلقات في بايثون</title>
+  <title id="pageTitle">اختبار المهارات الرقمية</title>
   <!-- Tailwind CSS للواجهة وتنسيق RTL -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- مكتبة Pyodide لتشغيل بايثون مباشرة في المتصفح -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
   <style>
     body { font-family: 'Cairo', sans-serif; }
-    textarea { 
-      font-family: 'Consolas', 'Courier New', monospace; 
-      direction: ltr; 
+    /* تنسيق محرر الكود المتقدم مع التلوين وترقيم الأسطر */
+    .code-editor-wrapper {
+      position: relative;
+      background-color: #0f172a; /* slate-900 */
+      border-radius: 0.75rem;
+      border: 1px solid #1e293b;
+      overflow: hidden;
+      direction: ltr;
       text-align: left;
-      -webkit-touch-callout: none !important;
     }
+    .editor-top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 14px;
+      background-color: #1e293b;
+      border-bottom: 1px solid #334155;
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+    }
+    .editor-content-area {
+      display: flex;
+      position: relative;
+      min-height: 160px;
+    }
+    .line-numbers {
+      width: 40px;
+      padding: 12px 0;
+      background-color: #090d16;
+      color: #475569;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 24px;
+      text-align: center;
+      user-select: none;
+      border-right: 1px solid #1e293b;
+      flex-shrink: 0;
+    }
+    .editor-stage {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+    .editor-highlight-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 12px;
+      margin: 0;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 15px;
+      line-height: 24px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      pointer-events: none;
+      color: #e2e8f0;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    .editor-textarea {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 160px;
+      padding: 12px;
+      margin: 0;
+      background: transparent !important;
+      color: transparent !important;
+      caret-color: #34d399 !important; /* emerald-400 */
+      border: 0 !important;
+      outline: none !important;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 15px;
+      line-height: 24px;
+      resize: vertical;
+      white-space: pre-wrap;
+      word-break: break-all;
+      box-sizing: border-box;
+      z-index: 2;
+    }
+    /* Syntax Highlighting Colors */
+    .hl-kw { color: #f43f5e; font-weight: bold; } /* rose-500: def, for, in, if, while... */
+    .hl-builtin { color: #38bdf8; font-weight: bold; } /* sky-400: print, range, len, int, str... */
+    .hl-str { color: #34d399; } /* emerald-400: 'strings' */
+    .hl-num { color: #fbbf24; } /* amber-400: 123 */
+    .hl-comment { color: #64748b; font-style: italic; } /* slate-500: # comment */
+    .hl-op { color: #c084fc; } /* purple-400: : + - * / = == */
     #toastMessage {
       position: fixed;
       bottom: 24px;
@@ -44,96 +130,393 @@
 
   <div class="max-w-3xl mx-auto px-4 mt-8">
     <!-- Header -->
-    <header class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6 text-center">
-      <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full mb-2">ثاني متوسط - مادة المهارات الرقمية</span>
-      <h1 class="text-2xl font-bold text-slate-800">اختبار عملي: حلقات التكرار (Loops)</h1>
-      <p class="text-sm text-slate-500 mt-1">اكتب المقطع البرمجي المطلوب لكل سؤال واضغط على "اختبار الكود" للتحقق من المخرجات قبل الإرسال.</p>
+    <header class="relative bg-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-200/80 mb-6 text-center overflow-hidden">
+      <!-- شريط علوي جمالي متدرج -->
+      <div class="absolute top-0 right-0 left-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500"></div>
+
+      <span id="gradeBadgeDisplay" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-800 text-xs sm:text-sm font-bold rounded-full mb-3 border border-emerald-200 shadow-sm">
+        <span>🏷️</span>
+        <span>ثاني متوسط - مادة المهارات الرقمية</span>
+      </span>
+
+      <h1 id="quizTitleDisplay" class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight leading-snug">اختبار عملي: حلقات التكرار (Loops)</h1>
+
+      <p id="quizDescDisplay" class="text-sm sm:text-base text-slate-600 mt-2 max-w-xl mx-auto leading-relaxed">اكتب المقطع البرمجي المطلوب لكل سؤال واضغط على "اختبار الكود" للتحقق من المخرجات قبل الإرسال.</p>
+
+      <!-- Timer Box -->
+      <div id="timerContainer" class="hidden mt-4 inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl shadow-inner font-mono text-base sm:text-lg border border-slate-700">
+        <span class="text-lg">⏳</span>
+        <span class="font-sans text-xs text-slate-300 font-semibold">الوقت المتبقي:</span>
+        <span id="timerDisplay" class="font-bold text-emerald-400 tracking-widest">00:00</span>
+      </div>
     </header>
 
     <!-- Student Info -->
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الطالب الرباعي:</label>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">اسم الطالب الثلاثي:</label>
           <input type="text" id="studentName" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="أدخل اسمك هنا">
         </div>
         <div>
-          <label class="block text-sm font-semibold text-slate-700 mb-1">الصف / الفصل:</label>
-          <input type="text" id="studentClass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="مثال: ثاني / 1">
+          <label class="block text-sm font-semibold text-slate-700 mb-1"> الفصل:</label>
+          <input type="text" id="studentClass" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none" placeholder="مثال: أ / ب / ج">
         </div>
       </div>
     </div>
 
-    <!-- Question 1: For Loop -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-bold text-slate-800">السؤال الأول: حلقة for</h2>
-        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md">درجة واحدة</span>
-      </div>
-      <p class="text-sm text-slate-600 mb-3 leading-relaxed">
-        اكتب مقطعاً برمجياً بلغة بايثون يقوم بطباعة الأعداد من <strong>5</strong> إلى <strong>15</strong> (متضمنة الرقمين) باستخدام حلقة <code>for</code>.
-      </p>
-
-      <label class="block text-xs font-semibold text-slate-500 mb-1">محرر بايثون (for loop):</label>
-      <textarea id="codeFor" rows="5" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full p-3 bg-slate-900 text-emerald-400 rounded-lg text-sm border-0 focus:ring-2 focus:ring-emerald-500" placeholder="# اكتب الكود هنا"></textarea>
-
-      <div class="flex items-center justify-between mt-3">
-        <button onclick="testPythonCode('for')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
-          ▶ تشغيل واختبار كود for
-        </button>
-        <span id="badgeFor" class="text-xs px-2 py-1 rounded hidden font-semibold"></span>
-      </div>
-
-      <div id="outBoxFor" class="mt-3 p-3 bg-slate-100 rounded-lg text-xs font-mono hidden text-left dir-ltr">
-        <span class="text-slate-400 block mb-1 font-sans">المخرجات (Console Output):</span>
-        <pre id="outputFor" class="text-slate-800 whitespace-pre-wrap"></pre>
-      </div>
-    </div>
-
-    <!-- Question 2: While Loop -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-bold text-slate-800">السؤال الثاني: حلقة while</h2>
-        <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md">درجة واحدة</span>
-      </div>
-      <p class="text-sm text-slate-600 mb-3 leading-relaxed">
-        اكتب مقطعاً برمجياً بلغة بايثون يقوم بطباعة الأعداد من <strong>5</strong> إلى <strong>15</strong> (متضمنة الرقمين) باستخدام حلقة <code>while</code>.
-      </p>
-
-      <label class="block text-xs font-semibold text-slate-500 mb-1">محرر بايثون (while loop):</label>
-      <textarea id="codeWhile" rows="6" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full p-3 bg-slate-900 text-emerald-400 rounded-lg text-sm border-0 focus:ring-2 focus:ring-emerald-500" placeholder="# اكتب الكود هنا"></textarea>
-
-      <div class="flex items-center justify-between mt-3">
-        <button onclick="testPythonCode('while')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
-          ▶ تشغيل واختبار كود while
-        </button>
-        <span id="badgeWhile" class="text-xs px-2 py-1 rounded hidden font-semibold"></span>
-      </div>
-
-      <div id="outBoxWhile" class="mt-3 p-3 bg-slate-100 rounded-lg text-xs font-mono hidden text-left dir-ltr">
-        <span class="text-slate-400 block mb-1 font-sans">المخرجات (Console Output):</span>
-        <pre id="outputWhile" class="text-slate-800 whitespace-pre-wrap"></pre>
-      </div>
+    <!-- Questions Container (Dynamic) -->
+    <div id="quizQuestionsContainer" class="space-y-6">
+      <!-- يتم توليد الأسئلة هنا تلقائياً حسب الإعدادات -->
     </div>
 
     <!-- Submit Section -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 text-center">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 text-center mt-6">
       <button id="submitBtn" onclick="submitAssessment()" class="w-full md:w-1/2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg">
         إرسال الإجابات ورصد النتيجة
       </button>
       <div id="submitStatus" class="mt-3 text-sm font-semibold hidden"></div>
     </div>
+
+    <!-- Link to Admin (Optional for teacher) -->
+    <!-- <div class="text-center mt-6">
+      <a href="admin.html" class="text-xs text-slate-400 hover:text-slate-600 underline">⚙️ لوحة تحكم المعلم وإعدادات الأسئلة</a>
+    </div> -->
   </div>
 
   <script>
-    // ضع هنا رابط Web App الخاص بـ Google Apps Script
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6ZYOKioNLazDk1vjS-6O6yIOBoj0q2ypbS_ekEsOKVSfjZba2FMEoVdchSjIxbg6x7Q/exec";
+    // جلب الإعدادات من ملف config.js أو localStorage
+    const QUIZ_CONFIG = {
+  "gradeBadge": "ثاني متوسط - مادة المهارات الرقمية",
+  "quizTitle": "اختبار عملي: حلقات التكرار (Loops)",
+  "quizDesc": "اكتب المقطع البرمجي المطلوب لكل سؤال واضغط على \"اختبار الكود\" للتحقق من المخرجات قبل الإرسال.",
+  "durationMinutes": 15,
+  "maxSubmissions": 1,
+  "scriptUrl": "https://script.google.com/macros/s/AKfycbz6ZYOKioNLazDk1vjS-6O6yIOBoj0q2ypbS_ekEsOKVSfjZba2FMEoVdchSjIxbg6x7Q/exec",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "code",
+      "title": "السؤال الأول: حلقة for",
+      "score": 1,
+      "description": "اكتب مقطعاً برمجياً بلغة بايثون يقوم بطباعة الأعداد من <strong>5</strong> إلى <strong>15</strong> (متضمنة الرقمين) باستخدام حلقة <code>for</code>.",
+      "placeholder": "# اكتب الكود هنا",
+      "requiredKeyword": "for",
+      "expectedOutput": "5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15"
+    },
+    {
+      "id": "q2",
+      "type": "code",
+      "title": "السؤال الثاني: حلقة while",
+      "score": 1,
+      "description": "اكتب مقطعاً برمجياً بلغة بايثون يقوم بطباعة الأعداد الزوجية التنازلية من <strong>10</strong> إلى <strong>2</strong> (متضمنة الرقمين) باستخدام حلقة <code>while</code>.",
+      "placeholder": "# اكتب الكود هنا",
+      "requiredKeyword": "while",
+      "expectedOutput": "10\n8\n6\n4\n2"
+    }
+  ]
+};
+    const SCRIPT_URL = QUIZ_CONFIG.scriptUrl;
 
     let pyodide = null;
-    let results = {
-      forValid: false,
-      whileValid: false
+    let quizResults = {}; // تخزين صحة حل كل سؤال بحسب id
+    let totalPossibleScore = 0;
+    let quizTimerInterval = null;
+
+    // المؤثرات الصوتية التفاعلية عبر Web Audio API
+    const AudioFeedback = {
+      ctx: null,
+      getCtx() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+        return this.ctx;
+      },
+      playSuccess() {
+        try {
+          const ctx = this.getCtx();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          const now = ctx.currentTime;
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.1); // E5
+          osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.2); // G5
+          
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } catch(e) {}
+      },
+      playTick() {
+        try {
+          const ctx = this.getCtx();
+          if (!ctx) return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          
+          const now = ctx.currentTime;
+          osc.frequency.setValueAtTime(800, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } catch(e) {}
+      }
     };
+
+    // تشغيل مؤقت الاختبار
+    function startQuizTimer(minutes) {
+      if (!minutes || minutes <= 0) return;
+
+      const timerContainer = document.getElementById('timerContainer');
+      const timerDisplay = document.getElementById('timerDisplay');
+      if (!timerContainer || !timerDisplay) return;
+
+      timerContainer.classList.remove('hidden');
+
+      let totalSeconds = minutes * 60;
+
+      function updateDisplay() {
+        const m = Math.floor(totalSeconds / 60);
+        const s = totalSeconds % 60;
+        timerDisplay.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+        if (totalSeconds <= 60) {
+          timerDisplay.classList.remove('text-emerald-400');
+          timerDisplay.classList.add('text-red-500', 'animate-pulse');
+          // صوت نبضة خفيفة في آخر 10 ثوانٍ
+          if (totalSeconds <= 10 && totalSeconds > 0) {
+            AudioFeedback.playTick();
+          }
+        } else if (totalSeconds <= 180) {
+          timerDisplay.classList.remove('text-emerald-400');
+          timerDisplay.classList.add('text-amber-400');
+        }
+
+        if (totalSeconds <= 0) {
+          clearInterval(quizTimerInterval);
+          alert("⏱️ انتهى وقت الاختبار المخصص! سيتم إرسال إجاباتك الآن تلقائياً.");
+          submitAssessment(true);
+        }
+        totalSeconds--;
+      }
+
+      updateDisplay();
+      quizTimerInterval = setInterval(updateDisplay, 1000);
+    }
+
+    // تهيئة واجهة الاختبار من الإعدادات
+    function renderQuizUI() {
+      document.title = QUIZ_CONFIG.quizTitle;
+      document.getElementById('gradeBadgeDisplay').innerHTML = `<span>🏷️</span> <span>${QUIZ_CONFIG.gradeBadge}</span>`;
+      document.getElementById('quizTitleDisplay').innerText = QUIZ_CONFIG.quizTitle;
+      document.getElementById('quizDescDisplay').innerText = QUIZ_CONFIG.quizDesc;
+
+      const container = document.getElementById('quizQuestionsContainer');
+      container.innerHTML = '';
+      totalPossibleScore = 0;
+
+      QUIZ_CONFIG.questions.forEach((q, index) => {
+        quizResults[q.id] = false;
+        totalPossibleScore += (Number(q.score) || 1);
+        const qType = q.type || 'code';
+
+        const card = document.createElement('div');
+        card.className = "bg-white p-6 rounded-2xl shadow-sm border border-slate-100";
+        card.id = `card_${q.id}`;
+
+        let bodyHTML = '';
+
+        if (qType === 'code') {
+          bodyHTML = `
+            <div class="mb-2">
+              <div class="code-editor-wrapper">
+                <div class="editor-top-bar">
+                  <span class="font-bold">🐍 محرر بايثون التفاعلي</span>
+                  <span class="text-[10px] text-slate-400">يدعم المسافات البادئة تلقائياً (4 مسافات)</span>
+                </div>
+                <div class="editor-content-area">
+                  <div id="lines_${q.id}" class="line-numbers">1</div>
+                  <div class="editor-stage">
+                    <pre id="highlight_${q.id}" class="editor-highlight-layer" aria-hidden="true"></pre>
+                    <textarea id="editor_${q.id}" rows="6" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" class="editor-textarea" placeholder="${q.placeholder || '# اكتب الكود هنا'}"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-3">
+              <button type="button" onclick="testPythonCode('${q.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                ▶ تشغيل واختبار الكود
+              </button>
+              <span id="badge_${q.id}" class="text-xs px-2 py-1 rounded hidden font-semibold"></span>
+            </div>
+
+            <div id="outBox_${q.id}" class="mt-3 p-3 bg-slate-100 rounded-lg text-xs font-mono hidden text-left dir-ltr">
+              <span class="text-slate-400 block mb-1 font-sans">المخرجات (Console Output):</span>
+              <pre id="output_${q.id}" class="text-slate-800 whitespace-pre-wrap"></pre>
+            </div>
+          `;
+        } else if (qType === 'mcq') {
+          const options = q.options || [];
+          const optList = options.map((opt, i) => `
+            <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+              <input type="radio" name="ans_${q.id}" value="${i}" onchange="checkMCQ('${q.id}', ${i})" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+              <span class="text-sm font-semibold text-slate-700">${opt}</span>
+            </label>
+          `).join('');
+
+          bodyHTML = `
+            <div class="space-y-2 mt-2">
+              ${optList}
+            </div>
+            <div class="flex items-center justify-between mt-3">
+              <span class="text-xs text-slate-400">اختر إجابة واحدة</span>
+              <span id="badge_${q.id}" class="text-xs px-2.5 py-1 rounded hidden font-semibold"></span>
+            </div>
+          `;
+        } else if (qType === 'reorder') {
+          // خلط العناصر بشكل عشوائي للترتيب
+          const shuffled = (q.items || []).map((text, originalIndex) => ({ text, originalIndex }));
+          // بعثرة العناصر مع التأكد من عدم بقائها كما هي إذا أمكن
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+          }
+
+          bodyHTML = `
+            <p class="text-xs text-indigo-600 mb-2 font-medium">استخدم أزرار الأسهم (⬆ ⬇) لترتيب الخطوات بالتسلسل الصحيح من الأعلى إلى الأسفل:</p>
+            <div id="reorder_list_${q.id}" class="space-y-2" data-qid="${q.id}">
+              ${shuffled.map((item, idx) => `
+                <div class="reorder-item flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl" data-original="${item.originalIndex}">
+                  <div class="flex items-center gap-2">
+                    <span class="step-num text-xs font-bold w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center">${idx + 1}</span>
+                    <span class="text-sm font-semibold text-slate-800">${item.text}</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button type="button" onclick="moveReorderItem('${q.id}', this, -1)" class="w-7 h-7 bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 rounded flex items-center justify-center text-xs font-bold transition">⬆</button>
+                    <button type="button" onclick="moveReorderItem('${q.id}', this, 1)" class="w-7 h-7 bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 rounded flex items-center justify-center text-xs font-bold transition">⬇</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="flex items-center justify-between mt-3">
+              <button type="button" onclick="checkReorder('${q.id}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition">
+                ✔ تحقق من الترتيب
+              </button>
+              <span id="badge_${q.id}" class="text-xs px-2.5 py-1 rounded hidden font-semibold"></span>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold text-slate-800">${q.title}</h2>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md font-semibold">${q.score} ${q.score > 2 ? 'درجات' : (q.score === 2 ? 'درجتان' : 'درجة واحدة')}</span>
+          </div>
+          <p class="text-base md:text-lg text-slate-700 mb-3 leading-relaxed">
+            ${q.description}
+          </p>
+          ${bodyHTML}
+        `;
+        container.appendChild(card);
+      });
+
+      // تطبيق حماية مكافحة الغش
+      setupAntiCheat();
+    }
+
+    // فحص إجابة سؤال الاختيار من متعدد
+    function checkMCQ(qId, selectedIdx) {
+      const q = QUIZ_CONFIG.questions.find(item => item.id === qId);
+      if (!q) return;
+
+      const badge = document.getElementById(`badge_${qId}`);
+      badge.classList.remove('hidden');
+
+      const isCorrect = (Number(selectedIdx) === Number(q.correctAnswer));
+      quizResults[qId] = isCorrect;
+
+      if (isCorrect) {
+        badge.className = "text-xs px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold";
+        badge.innerText = "إجابة صحيحة ✔";
+        AudioFeedback.playSuccess();
+      } else {
+        badge.className = "text-xs px-2.5 py-1 rounded bg-red-100 text-red-700 font-semibold";
+        badge.innerText = "إجابة غير صحيحة ✖";
+      }
+    }
+
+    // تحريك عنصر ترتيب لأعلى أو لأسفل
+    function moveReorderItem(qId, btn, direction) {
+      const itemRow = btn.closest('.reorder-item');
+      const list = document.getElementById(`reorder_list_${qId}`);
+      if (!itemRow || !list) return;
+
+      if (direction === -1 && itemRow.previousElementSibling) {
+        list.insertBefore(itemRow, itemRow.previousElementSibling);
+      } else if (direction === 1 && itemRow.nextElementSibling) {
+        list.insertBefore(itemRow.nextElementSibling, itemRow);
+      }
+
+      // تحديث ترقيم الخطوات
+      const items = list.querySelectorAll('.reorder-item');
+      items.forEach((row, i) => {
+        const numSpan = row.querySelector('.step-num');
+        if (numSpan) numSpan.innerText = i + 1;
+      });
+
+      // إخفاء الشارة السابقة ليعيد الطالب الفحص
+      const badge = document.getElementById(`badge_${qId}`);
+      if (badge) badge.classList.add('hidden');
+      quizResults[qId] = false;
+    }
+
+    // فحص ترتيب الخطوات
+    function checkReorder(qId) {
+      const q = QUIZ_CONFIG.questions.find(item => item.id === qId);
+      const list = document.getElementById(`reorder_list_${qId}`);
+      const badge = document.getElementById(`badge_${qId}`);
+      if (!q || !list || !badge) return;
+
+      const items = Array.from(list.querySelectorAll('.reorder-item'));
+      let isCorrect = true;
+
+      items.forEach((row, index) => {
+        const originalIndex = Number(row.getAttribute('data-original'));
+        if (originalIndex !== index) {
+          isCorrect = false;
+        }
+      });
+
+      badge.classList.remove('hidden');
+      quizResults[qId] = isCorrect;
+
+      if (isCorrect) {
+        badge.className = "text-xs px-2.5 py-1 rounded bg-emerald-100 text-emerald-800 font-semibold";
+        badge.innerText = "الترتيب صحيح تماماً ✔";
+        AudioFeedback.playSuccess();
+      } else {
+        badge.className = "text-xs px-2.5 py-1 rounded bg-amber-100 text-amber-800 font-semibold";
+        badge.innerText = "الترتيب غير دقيق، حاول مجدداً ✖";
+      }
+    }
 
     // تحميل بيئة Pyodide في الخلفية
     async function initPyodide() {
@@ -147,16 +530,19 @@
     initPyodide();
 
     // دالة اختبار الكود المحلي
-    async function testPythonCode(type) {
+    async function testPythonCode(qId) {
       if (!pyodide) {
         alert("محرك بايثون قيد التحميل حالياً، يرجى الانتظار بضع ثوانٍ...");
         return;
       }
 
-      const codeInput = (type === 'for') ? document.getElementById('codeFor').value : document.getElementById('codeWhile').value;
-      const outBox = (type === 'for') ? document.getElementById('outBoxFor') : document.getElementById('outBoxWhile');
-      const outElem = (type === 'for') ? document.getElementById('outputFor') : document.getElementById('outputWhile');
-      const badge = (type === 'for') ? document.getElementById('badgeFor') : document.getElementById('badgeWhile');
+      const q = QUIZ_CONFIG.questions.find(item => item.id === qId);
+      if (!q) return;
+
+      const codeInput = document.getElementById(`editor_${qId}`).value;
+      const outBox = document.getElementById(`outBox_${qId}`);
+      const outElem = document.getElementById(`output_${qId}`);
+      const badge = document.getElementById(`badge_${qId}`);
 
       outBox.classList.remove('hidden');
       badge.classList.remove('hidden');
@@ -165,32 +551,46 @@
         outElem.innerText = "تنبيه: المحرر فارغ.";
         badge.className = "text-xs px-2 py-1 rounded bg-amber-100 text-amber-800";
         badge.innerText = "لم يتم إدخال كود";
+        quizResults[qId] = false;
         return;
       }
 
-      // التحقق من نوع الحلقة المستخدمة داخل الكود المكتوب
-      const lower = codeInput.toLowerCase();
-      if (type === 'for' && !lower.includes('for')) {
-        outElem.innerText = "تنبيه: يجب استخدام حلقة for في هذا السؤال.";
-        badge.className = "text-xs px-2 py-1 rounded bg-red-100 text-red-700";
-        badge.innerText = "حلقة for مفقودة";
-        results.forValid = false;
-        return;
-      }
-      if (type === 'while' && !lower.includes('while')) {
-        outElem.innerText = "تنبيه: يجب استخدام حلقة while في هذا السؤال.";
-        badge.className = "text-xs px-2 py-1 rounded bg-red-100 text-red-700";
-        badge.innerText = "حلقة while مفقودة";
-        results.whileValid = false;
-        return;
+      // التحقق من الكلمة الإلزامية إن وجدت
+      if (q.requiredKeyword && q.requiredKeyword.trim()) {
+        const keyword = q.requiredKeyword.trim().toLowerCase();
+        if (!codeInput.toLowerCase().includes(keyword)) {
+          outElem.innerText = `تنبيه: يجب استخدام الكلمة المفتاحية (${keyword}) في هذا السؤال.`;
+          badge.className = "text-xs px-2 py-1 rounded bg-red-100 text-red-700";
+          badge.innerText = `الكلمة (${keyword}) مفقودة`;
+          quizResults[qId] = false;
+          return;
+        }
       }
 
-      // تحويل مخرجات print إلى نص داخل جافاسكربت
+      // تحويل مخرجات print ودعم مدخلات input() التلقائية
       try {
+        const mockInputsRaw = (q.mockInputs !== undefined && q.mockInputs !== null) ? String(q.mockInputs) : "";
+        const mockInputsList = mockInputsRaw.split(/\r?\n/).map(s => s.trimEnd());
+        
+        pyodide.globals.set("_js_mock_inputs", mockInputsList);
+
         await pyodide.runPythonAsync(`
 import sys
 import io
+import builtins
+
 sys.stdout = io.StringIO()
+
+_inputs_queue = list(_js_mock_inputs)
+
+def _custom_mock_input(prompt=""):
+    if prompt:
+        sys.stdout.write(str(prompt))
+    if len(_inputs_queue) > 0:
+        return _inputs_queue.pop(0)
+    return ""
+
+builtins.input = _custom_mock_input
         `);
 
         // تشغيل كود الطالب
@@ -199,46 +599,114 @@ sys.stdout = io.StringIO()
         const stdout = await pyodide.runPythonAsync("sys.stdout.getvalue()");
         outElem.innerText = stdout.trim() || "[الكود تم تنفيذه بنجاح لكن دون أي مخرجات مطبوعة]";
 
-        // استخراج الأرقام من المخرجات والتحقق من التسلسل (5 إلى 15)
-        const printedNums = stdout.trim().split(/\s+/).filter(Boolean).map(Number);
-        const expectedNums = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        // التحقق من المخرجات المتوقعة
+        let isCorrect = true;
+        if (q.expectedOutput && q.expectedOutput.trim()) {
+          const actualTokens = stdout.trim().split(/\s+/).filter(Boolean);
+          const expectedTokens = q.expectedOutput.trim().split(/\s+/).filter(Boolean);
 
-        const isExactMatch = printedNums.length === expectedNums.length && 
-                             printedNums.every((val, idx) => val === expectedNums[idx]);
+          if (actualTokens.length !== expectedTokens.length) {
+            isCorrect = false;
+          } else {
+            for (let i = 0; i < actualTokens.length; i++) {
+              if (actualTokens[i] !== expectedTokens[i]) {
+                isCorrect = false;
+                break;
+              }
+            }
+          }
+        }
 
-        if (isExactMatch) {
+        if (isCorrect) {
           badge.className = "text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800";
           badge.innerText = "المخرجات صحيحة تماماً ✔";
-          if (type === 'for') results.forValid = true;
-          if (type === 'while') results.whileValid = true;
+          quizResults[qId] = true;
+          AudioFeedback.playSuccess();
         } else {
           badge.className = "text-xs px-2 py-1 rounded bg-amber-100 text-amber-800";
           badge.innerText = "المخرجات لا تطابق المطلوب ✖";
-          if (type === 'for') results.forValid = false;
-          if (type === 'while') results.whileValid = false;
+          quizResults[qId] = false;
         }
 
       } catch (err) {
         outElem.innerText = "Syntax / Runtime Error:\n" + err.message;
         badge.className = "text-xs px-2 py-1 rounded bg-red-100 text-red-700";
         badge.innerText = "خطأ في الكود ✖";
-        if (type === 'for') results.forValid = false;
-        if (type === 'while') results.whileValid = false;
+        quizResults[qId] = false;
+      }
+    }
+
+    // التحقق من سجل محاولات الطالب
+    function getSubmissionStorageKey() {
+      const cleanTitle = (QUIZ_CONFIG.quizTitle || 'default').replace(/[\s\/\\:*?"<>|]/g, '_');
+      return `quiz_submissions_${cleanTitle}`;
+    }
+
+    function checkSubmissionLimits() {
+      const maxAllowed = (QUIZ_CONFIG.maxSubmissions !== undefined) ? Number(QUIZ_CONFIG.maxSubmissions) : 1;
+      if (maxAllowed === 0) return; // محاولات غير محدودة
+
+      const count = Number(localStorage.getItem(getSubmissionStorageKey()) || 0);
+      if (count >= maxAllowed) {
+        // حظر الإرسال وإظهار رسالة إغلاق
+        const submitBtn = document.getElementById('submitBtn');
+        const status = document.getElementById('submitStatus');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.className = "w-full md:w-1/2 py-3 bg-slate-300 text-slate-500 font-bold rounded-xl cursor-not-allowed shadow-none";
+          submitBtn.innerText = "تم استنفاذ المحاولات المسموحة لهذا الاختبار";
+        }
+        if (status) {
+          status.classList.remove('hidden');
+          status.className = "mt-3 text-sm font-bold text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200";
+          status.innerHTML = `⚠️ لقد قمت بإرسال إجابات هذا الاختبار مسبقاً (${count} من ${maxAllowed} محاولة). تم رصد درجتك لدى المعلم.`;
+        }
+        // تعطيل المؤقت إن كان يعمل
+        if (quizTimerInterval) clearInterval(quizTimerInterval);
+        const timerContainer = document.getElementById('timerContainer');
+        if (timerContainer) timerContainer.classList.add('hidden');
       }
     }
 
     // إرسال البيانات إلى Google Sheets
-    async function submitAssessment() {
-      const name = document.getElementById('studentName').value.trim();
-      const sClass = document.getElementById('studentClass').value.trim();
-      const codeFor = document.getElementById('codeFor').value;
-      const codeWhile = document.getElementById('codeWhile').value;
+    async function submitAssessment(isAutoSubmit = false) {
+      const nameInput = document.getElementById('studentName');
+      const classInput = document.getElementById('studentClass');
+      let name = nameInput.value.trim();
+      let sClass = classInput.value.trim();
       const status = document.getElementById('submitStatus');
       const btn = document.getElementById('submitBtn');
 
-      if (!name || !sClass) {
-        alert("يرجى كتابة الاسم والفصل قبل إرسال الاختبار.");
-        return;
+      // إعادة ضبط الحدود
+      nameInput.classList.remove('border-red-500', 'ring-2', 'ring-red-400');
+      classInput.classList.remove('border-red-500', 'ring-2', 'ring-red-400');
+
+      if (!name) {
+        if (isAutoSubmit) {
+          name = "طالب (انتهى الوقت ولم يدخل اسمه)";
+        } else {
+          alert("يرجى كتابة اسم الطالب أولاً.");
+          nameInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
+          nameInput.focus();
+          nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+
+      if (!sClass) {
+        if (isAutoSubmit) {
+          sClass = "-";
+        } else {
+          alert("يرجى إدخال الفصل.");
+          classInput.classList.add('border-red-500', 'ring-2', 'ring-red-400');
+          classInput.focus();
+          classInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+      }
+
+      if (quizTimerInterval) {
+        clearInterval(quizTimerInterval);
       }
 
       btn.disabled = true;
@@ -247,18 +715,72 @@ sys.stdout = io.StringIO()
       status.className = "mt-3 text-sm font-semibold text-blue-600";
       status.innerText = "يتم الآن إرسال بياناتك إلى المعلم...";
 
-      const totalScore = (results.forValid ? 1 : 0) + (results.whileValid ? 1 : 0);
-
+      let totalEarnedScore = 0;
       const payload = {
         studentName: name,
         studentClass: sClass,
-        quizTitle: "اختبار عملي: حلقات التكرار (Loops)",
-        forCode: codeFor,
-        forSuccess: results.forValid,
-        whileCode: codeWhile,
-        whileSuccess: results.whileValid,
-        totalScore: totalScore
+        quizTitle: QUIZ_CONFIG.quizTitle || 'اختبار بدون عنوان',
+        timestamp: new Date().toISOString()
       };
+
+      // جمع إجابات كل الأسئلة
+      QUIZ_CONFIG.questions.forEach((q, index) => {
+        const num = index + 1;
+        const qType = q.type || 'code';
+        let answerText = '';
+        let isValid = !!quizResults[q.id];
+
+        if (qType === 'code') {
+          answerText = (document.getElementById(`editor_${q.id}`) || {}).value || '';
+        } else if (qType === 'mcq') {
+          const selectedRadio = document.querySelector(`input[name="ans_${q.id}"]:checked`);
+          if (selectedRadio) {
+            const optIdx = Number(selectedRadio.value);
+            answerText = (q.options && q.options[optIdx]) ? q.options[optIdx] : `الخيار ${optIdx + 1}`;
+            isValid = (optIdx === Number(q.correctAnswer));
+          } else {
+            answerText = "لم يُجب";
+            isValid = false;
+          }
+        } else if (qType === 'reorder') {
+          const list = document.getElementById(`reorder_list_${q.id}`);
+          if (list) {
+            const items = Array.from(list.querySelectorAll('.reorder-item'));
+            let allCorrect = true;
+            const userOrderTexts = [];
+            items.forEach((row, rIdx) => {
+              const orig = Number(row.getAttribute('data-original'));
+              if (orig !== rIdx) allCorrect = false;
+              const textElem = row.querySelector('.text-sm');
+              userOrderTexts.push(`${rIdx + 1}. ` + (textElem ? textElem.innerText : ''));
+            });
+            answerText = userOrderTexts.join(' -> ');
+            isValid = allCorrect;
+          }
+        }
+
+        quizResults[q.id] = isValid;
+        payload[`q_${num}_code`] = answerText;
+        payload[`q_${num}_answer`] = answerText;
+        payload[`q_${num}_valid`] = isValid;
+        payload[`q_${num}_title`] = q.title;
+
+        // دعم للتوافقية القديمة في حال كان السكربت السابق يستقبل forCode و whileCode
+        if (index === 0) {
+          payload.forCode = answerText;
+          payload.forSuccess = isValid;
+        } else if (index === 1) {
+          payload.whileCode = answerText;
+          payload.whileSuccess = isValid;
+        }
+
+        if (isValid) {
+          totalEarnedScore += (Number(q.score) || 1);
+        }
+      });
+
+      payload.totalScore = totalEarnedScore;
+      payload.totalPossible = totalPossibleScore;
 
       try {
         await fetch(SCRIPT_URL, {
@@ -269,8 +791,20 @@ sys.stdout = io.StringIO()
         });
 
         status.className = "mt-3 text-sm font-semibold text-emerald-600";
-        status.innerText = `تم إرسال الاختبار بنجاح! درجتك التقديرية: ${totalScore} من 2`;
+        status.innerText = `تم إرسال الاختبار بنجاح! درجتك التقديرية: ${totalEarnedScore} من ${totalPossibleScore}`;
         btn.innerText = "تم الإرسال";
+
+        // تسجيل المحاولة محلياً
+        const maxAllowed = (QUIZ_CONFIG.maxSubmissions !== undefined) ? Number(QUIZ_CONFIG.maxSubmissions) : 1;
+        if (maxAllowed > 0) {
+          const currentCount = Number(localStorage.getItem(getSubmissionStorageKey()) || 0) + 1;
+          localStorage.setItem(getSubmissionStorageKey(), currentCount);
+          if (currentCount >= maxAllowed) {
+            btn.disabled = true;
+            btn.className = "w-full md:w-1/2 py-3 bg-slate-300 text-slate-500 font-bold rounded-xl cursor-not-allowed shadow-none";
+            btn.innerText = "تم استنفاذ المحاولات المسموحة";
+          }
+        }
       } catch (e) {
         status.className = "mt-3 text-sm font-semibold text-red-600";
         status.innerText = "حدث خطأ أثناء الإرسال. يرجى مراجعة المعلم.";
@@ -283,7 +817,6 @@ sys.stdout = io.StringIO()
 // 🚫 نظام منع النسخ واللصق والغش
 // =========================================================================
 
-// دالة إظهار التنبيه (Toast)
 function showToast(message, type = 'warning') {
   let toast = document.getElementById('toastMessage');
   if (!toast) {
@@ -300,83 +833,143 @@ function showToast(message, type = 'warning') {
   }, 2500);
 }
 
-// 📱 منع شريط اقتراحات الحافظة في كيبورد الجوال ولصق النصوص
-['codeFor', 'codeWhile'].forEach(id => {
-  const el = document.getElementById(id);
-  if (!el) return;
-  
-  let previousValue = el.value;
-  
-  ['keydown', 'focus', 'click', 'touchstart'].forEach(evt => {
-    el.addEventListener(evt, () => {
-      previousValue = el.value;
+function setupAntiCheat() {
+  document.querySelectorAll('textarea').forEach(el => {
+    let previousValue = el.value;
+    
+    ['keydown', 'focus', 'click', 'touchstart'].forEach(evt => {
+      el.addEventListener(evt, () => {
+        previousValue = el.value;
+      });
     });
-  });
 
-  // دعم مفتاح Enter للمسافة البادئة (4 مسافات) ومفتاح Tab
-  el.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const start = this.selectionStart;
-      const end = this.selectionEnd;
-      const val = this.value;
+    // دعم مفتاح Enter للمسافة البادئة (Indentation) ومفتاح Tab
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        const val = this.value;
+        
+        // معرفة السطر الحالي لحساب المسافة البادئة الموجودة مسبقاً
+        const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+        const currentLine = val.substring(lineStart, start);
+        const matchIndent = currentLine.match(/^[ ]+/);
+        let baseIndent = matchIndent ? matchIndent[0] : '';
+        
+        // إضافة 4 مسافات فقط وفقط إذا انتهى السطر بنقطتين رأسيين (:)
+        const trimmedBefore = currentLine.trimEnd();
+        const extraIndent = trimmedBefore.endsWith(':') ? '    ' : '';
+        const indentToInsert = '\n' + baseIndent + extraIndent;
+
+        this.value = val.substring(0, start) + indentToInsert + val.substring(end);
+        this.selectionStart = this.selectionEnd = start + indentToInsert.length;
+        previousValue = this.value;
+        syncEditor(this);
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        const tabSpaces = '    ';
+        this.value = this.value.substring(0, start) + tabSpaces + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 4;
+        previousValue = this.value;
+        syncEditor(this);
+        return;
+      }
+    });
+
+    el.addEventListener('beforeinput', function(e) {
+      if (e.inputType === 'insertFromPaste' || e.inputType === 'insertReplacementText' || e.inputType === 'insertFromDrop') {
+        e.preventDefault();
+        showToast('تم حظر اللصق من الحافظة!', 'warning');
+        return false;
+      }
+    });
+
+    el.addEventListener('input', function(e) {
+      if (e.inputType === 'insertFromPaste' || e.inputType === 'insertReplacementText') {
+        this.value = previousValue;
+        syncEditor(this);
+        showToast('تم حظر اللصق من الحافظة!', 'warning');
+        return;
+      }
       
-      const lineStart = val.lastIndexOf('\n', start - 1) + 1;
-      const currentLine = val.substring(lineStart, start);
-      const matchIndent = currentLine.match(/^[ ]+/);
-      let baseIndent = matchIndent ? matchIndent[0] : '';
+      const currentVal = this.value;
+      const addedChars = currentVal.length - previousValue.length;
+      if (addedChars > 3 && (!e.inputType || e.inputType === 'insertText')) {
+        this.value = previousValue;
+        syncEditor(this);
+        showToast('تم حظر إدراج النص المنسوخ من شريط الحافظة!', 'warning');
+        return;
+      }
       
-      const trimmedBefore = currentLine.trimEnd();
-      const extraIndent = (trimmedBefore.endsWith(':') || currentLine.trim().length === 0) ? '    ' : '';
-      const indentToInsert = '\n' + (baseIndent + extraIndent || '    ');
-
-      this.value = val.substring(0, start) + indentToInsert + val.substring(end);
-      this.selectionStart = this.selectionEnd = start + indentToInsert.length;
       previousValue = this.value;
-      return;
-    }
+      syncEditor(this);
+    });
 
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const start = this.selectionStart;
-      const end = this.selectionEnd;
-      const tabSpaces = '    ';
-      this.value = this.value.substring(0, start) + tabSpaces + this.value.substring(end);
-      this.selectionStart = this.selectionEnd = start + 4;
-      previousValue = this.value;
-      return;
-    }
-  });
+    el.addEventListener('scroll', function() {
+      const qId = this.id.replace('editor_', '');
+      const hl = document.getElementById(`highlight_${qId}`);
+      if (hl) {
+        hl.scrollTop = this.scrollTop;
+        hl.scrollLeft = this.scrollLeft;
+      }
+    });
 
-  // فحص نوع الإدخال قبل التطبيق (beforeinput)
-  el.addEventListener('beforeinput', function(e) {
-    if (e.inputType === 'insertFromPaste' || e.inputType === 'insertReplacementText' || e.inputType === 'insertFromDrop') {
-      e.preventDefault();
-      showToast('تم حظر اللصق من الحافظة!', 'warning');
-      return false;
-    }
+    // التهيئة الأولية للمحرر
+    syncEditor(el);
   });
+}
 
-  // فحص أثناء الإدخال لكشف اقتراحات شريط الكيبورد في أندرويد و iOS
-  el.addEventListener('input', function(e) {
-    if (e.inputType === 'insertFromPaste' || e.inputType === 'insertReplacementText') {
-      this.value = previousValue;
-      showToast('تم حظر اللصق من الحافظة!', 'warning');
-      return;
-    }
-    
-    // إذا أُدخل أكثر من 3 أحرف دفعة واحدة في عملية واحدة (كشريط اقتراح الحافظة)
-    const currentVal = this.value;
-    const addedChars = currentVal.length - previousValue.length;
-    if (addedChars > 3 && (!e.inputType || e.inputType === 'insertText')) {
-      this.value = previousValue;
-      showToast('تم حظر إدراج النص المنسوخ من شريط الحافظة!', 'warning');
-      return;
-    }
-    
-    previousValue = this.value;
+// دالة تلوين وترقيم أسطر محرر بايثون للطالب
+function highlightPythonCode(code) {
+  if (!code) return '';
+  const escape = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  // Regex tokens: comments, strings, keywords, builtins, numbers, operators
+  const tokenRegex = /(#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b(def|class|if|elif|else|for|while|break|continue|return|in|not|and|or|is|import|from|as|try|except|finally|pass|lambda|with)\b|\b(print|range|input|len|str|int|float|list|dict|set|tuple|sum|min|max|type|abs|round|open)\b|(\b\d+(?:\.\d+)?\b)|([:+\-*\/%=<>!&|^~]+)/g;
+
+  return code.replace(tokenRegex, (match, comment, str, kw, builtin, num, op) => {
+    if (comment) return `<span class="hl-comment">${escape(comment)}</span>`;
+    if (str) return `<span class="hl-str">${escape(str)}</span>`;
+    if (kw) return `<span class="hl-kw">${escape(kw)}</span>`;
+    if (builtin) return `<span class="hl-builtin">${escape(builtin)}</span>`;
+    if (num) return `<span class="hl-num">${escape(num)}</span>`;
+    if (op) return `<span class="hl-op">${escape(op)}</span>`;
+    return escape(match);
   });
-});
+}
+
+function syncEditor(textarea) {
+  if (!textarea || !textarea.id || !textarea.id.startsWith('editor_')) return;
+  const qId = textarea.id.replace('editor_', '');
+  const val = textarea.value;
+
+  // 1. تحديث طبقة التلوين
+  const hl = document.getElementById(`highlight_${qId}`);
+  if (hl) {
+    // إضافة \n إضافي في النهاية لضمان تطابق الأسطر مع textarea بدقة عند الضغط على Enter في سطر فارغ
+    hl.innerHTML = highlightPythonCode(val) + (val.endsWith('\n') ? '<br>' : '');
+    hl.scrollTop = textarea.scrollTop;
+    hl.scrollLeft = textarea.scrollLeft;
+  }
+
+  // 2. تحديث ترقيم الأسطر
+  const linesEl = document.getElementById(`lines_${qId}`);
+  if (linesEl) {
+    const lineCount = Math.max(1, val.split('\n').length);
+    let nums = '';
+    for (let i = 1; i <= lineCount; i++) {
+      nums += i + '<br>';
+    }
+    linesEl.innerHTML = nums;
+  }
+}
+}
 
 // 1. منع القائمة المنسدلة للزر الأيمن للماوس (Right Click)
 document.addEventListener('contextmenu', function (e) {
@@ -395,17 +988,15 @@ document.addEventListener('contextmenu', function (e) {
 
 // 3. منع اختصارات لوحة المفاتيح الشهيرة للنسخ واللصق وفحص الصفحة
 document.addEventListener('keydown', function (e) {
-    const isCtrlOrMeta = e.ctrlKey || e.metaKey; // دعم نظامي Windows و Mac (Cmd)
+    const isCtrlOrMeta = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
 
-    // تعطيل: Ctrl+C (نسخ), Ctrl+V (لصق), Ctrl+X (قص), Ctrl+U (عرض المصدر), Ctrl+S (حفظ)
     if (isCtrlOrMeta && ['c', 'v', 'x', 'u', 's'].includes(key)) {
         e.preventDefault();
         showToast("الاختصارات معطلة داخل منصة الاختبار!", "warning");
         return false;
     }
 
-    // تعطيل مفتاح F12 و اختصارات فتح أدوات المطور (Inspect Elements)
     if (
         e.key === 'F12' || 
         (isCtrlOrMeta && e.shiftKey && ['i', 'j', 'c'].includes(key))
@@ -415,6 +1006,11 @@ document.addEventListener('keydown', function (e) {
         return false;
     }
 });
+
+// تشغيل بناء الواجهة عند تحميل الصفحة
+renderQuizUI();
+startQuizTimer(Number(QUIZ_CONFIG.durationMinutes) || 0);
+checkSubmissionLimits();
   </script>
 </body>
 </html>
