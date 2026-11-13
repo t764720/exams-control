@@ -6,6 +6,7 @@
   <title>بوابة اختبارات وأنشطة المهارات الرقمية</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="auth.js"></script>
   <style>
     body { font-family: 'Cairo', sans-serif; }
   </style>
@@ -27,12 +28,31 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <button id="teacherManageToggle" onclick="toggleTeacherManagement()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm">
+          <span>🔐</span>
+          <span>دخول المعلم</span>
+        </button>
         <a href="admin.html" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm">
           <span>⚙️</span>
           <span>لوحة تحكم المعلم</span>
         </a>
       </div>
     </header>
+
+    <section id="teacherManagementBar" class="hidden bg-white p-4 rounded-2xl shadow-sm border border-indigo-200 mb-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-3">
+        <div class="flex-1">
+          <label for="managerGitHubToken" class="block text-xs font-bold text-slate-700 mb-1">رمز GitHub لإجراء التعديلات والحذف</label>
+          <input id="managerGitHubToken" type="password" autocomplete="off" placeholder="الصق رمز الوصول الشخصي الذي يملك صلاحية الكتابة" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          <p class="text-[11px] text-slate-400 mt-1">يُحفظ الرمز محلياً في هذا المتصفح، ويُستخدم لإجراء التغييرات على ملفات المستودع.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="saveManagerToken()" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200">حفظ الرمز</button>
+          <button onclick="toggleTeacherManagement()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">إنهاء الإدارة</button>
+        </div>
+      </div>
+      <p id="teacherManagementStatus" class="hidden mt-3 text-xs font-semibold" role="status" aria-live="polite"></p>
+    </section>
 
     <!-- Search / Filter Bar -->
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -70,10 +90,37 @@
     تم نسخ الرابط بنجاح! 📋
   </div>
 
+  <div id="teacherLoginModal" class="hidden fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4">
+    <form onsubmit="loginTeacher(event)" class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
+      <h2 class="text-lg font-extrabold text-slate-800 mb-2">دخول المعلم</h2>
+      <p class="text-xs text-slate-500 mb-4">أدخل كلمة مرور المعلم لتفعيل تعديل النماذج وحذفها.</p>
+      <input id="teacherPassword" type="password" autocomplete="current-password" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="كلمة المرور">
+      <p id="teacherLoginError" class="hidden mt-2 text-xs text-rose-600 font-bold" role="alert"></p>
+      <div class="flex justify-end gap-2 mt-4">
+        <button type="button" onclick="closeTeacherLogin()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">إلغاء</button>
+        <button id="teacherLoginButton" type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg">دخول</button>
+      </div>
+    </form>
+  </div>
+
+  <div id="formEditorModal" class="hidden fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-sm items-center justify-center p-4">
+    <section class="bg-white rounded-2xl shadow-xl p-5 w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <h2 class="text-base font-extrabold text-slate-800">تعديل النموذج: <span id="formEditorName" class="font-mono text-indigo-600" dir="ltr"></span></h2>
+        <button onclick="closeFormEditor()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">إغلاق</button>
+      </div>
+      <textarea id="formEditorSource" spellcheck="false" class="flex-1 min-h-[50vh] w-full p-4 bg-slate-900 text-emerald-300 text-xs rounded-xl border-0 leading-relaxed focus:ring-2 focus:ring-indigo-500"></textarea>
+      <div class="flex items-center justify-between gap-3 mt-3">
+        <p id="formEditorStatus" class="text-xs text-slate-500" role="status" aria-live="polite">سيتم حفظ محتوى HTML مباشرة في GitHub.</p>
+        <button id="formEditorSaveButton" onclick="saveEditedForm()" class="shrink-0 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl">💾 حفظ التعديلات</button>
+      </div>
+    </section>
+  </div>
+
   <script>
     // قائمة تفاصيل الاختبارات المعروفة (عناوين وأوصاف مخصصة)
     const KNOWN_METADATA = {
-      "operators.html": {
+      "نشاط-المعاملات-في-بايثون.html": {
         title: "نشاط: المعاملات في بايثون",
         grade: "مادة المهارات الرقمية",
         desc: "تطبيق عملي لاختبار وفهم المعاملات الحسابية والمنطقية في بايثون.",
@@ -126,16 +173,21 @@
 
     let allQuizzes = Object.keys(KNOWN_METADATA).map(fileName => ({
       file: `forms/${fileName}`,
+      fileName,
       ...KNOWN_METADATA[fileName]
     }));
+    let teacherManagementEnabled = TeacherAuth.isAuthenticated();
+    let editingForm = null;
+    const githubRepoApi = 'https://api.github.com/repos/t764720/exams-control';
 
     // جلب القائمة الحقيقية المباشرة من مجلد forms على GitHub
     // بحيث إذا تم حذف أو إضافة أي اختبار يتم تحديث البوابة بدقة متطابقة
-    async function loadQuizzesFromGitHub() {
+    async function loadQuizzesFromGitHub(token = '') {
       try {
         const repoOwner = "t764720";
         const repoName = "exams-control";
-        const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms?t=${Date.now()}`);
+        const headers = token ? githubHeaders(token) : {};
+        const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms?t=${Date.now()}`, { headers });
         
         if (res.ok) {
           const remoteFiles = await res.json();
@@ -164,9 +216,15 @@
           fetchFileCommitDates(syncedList);
 
           applyFilterAndSort();
+        } else if (token) {
+          throw new Error(await githubError(res));
         }
       } catch (e) {
-        console.log("Could not auto-fetch from GitHub API:", e);
+        if (token) {
+          setTeacherStatus(`تعذر تحديث قائمة النماذج من GitHub: ${e.message}`, true);
+        } else {
+          console.log("Could not auto-fetch from GitHub API:", e);
+        }
       }
     }
 
@@ -284,8 +342,246 @@
             </button>
           </div>
         `;
+        if (teacherManagementEnabled && q.fileName) {
+          const actions = document.createElement('div');
+          actions.className = 'pt-3 mt-3 border-t border-slate-100 flex items-center gap-2';
+
+          const editButton = document.createElement('button');
+          editButton.type = 'button';
+          editButton.className = 'flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl transition';
+          editButton.textContent = '✏️ تعديل النموذج';
+          editButton.addEventListener('click', () => editFormFile(q.fileName));
+
+          const deleteButton = document.createElement('button');
+          deleteButton.type = 'button';
+          deleteButton.className = 'flex-1 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-xl transition';
+          deleteButton.textContent = '🗑️ حذف النموذج';
+          deleteButton.addEventListener('click', () => deleteFormFile(q.fileName));
+
+          actions.append(editButton, deleteButton);
+          card.appendChild(actions);
+        }
         grid.appendChild(card);
       });
+    }
+
+    function setTeacherStatus(message, isError = false) {
+      const status = document.getElementById('teacherManagementStatus');
+      status.textContent = message;
+      status.className = `mt-3 text-xs font-semibold ${isError ? 'text-rose-600' : 'text-slate-600'}`;
+    }
+
+    function updateTeacherManagementUI() {
+      const bar = document.getElementById('teacherManagementBar');
+      const toggle = document.getElementById('teacherManageToggle');
+      bar.classList.toggle('hidden', !teacherManagementEnabled);
+      toggle.innerHTML = teacherManagementEnabled
+        ? '<span>🔓</span><span>إدارة النماذج مفعّلة</span>'
+        : '<span>🔐</span><span>دخول المعلم</span>';
+      if (teacherManagementEnabled) {
+        document.getElementById('managerGitHubToken').value = localStorage.getItem('gh_teacher_token') || '';
+      }
+    }
+
+    function toggleTeacherManagement() {
+      if (teacherManagementEnabled) {
+        teacherManagementEnabled = false;
+        updateTeacherManagementUI();
+        applyFilterAndSort();
+        return;
+      }
+
+      if (TeacherAuth.isAuthenticated()) {
+        teacherManagementEnabled = true;
+        updateTeacherManagementUI();
+        applyFilterAndSort();
+        return;
+      }
+
+      const modal = document.getElementById('teacherLoginModal');
+      document.getElementById('teacherLoginError').classList.add('hidden');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('teacherPassword').focus();
+    }
+
+    function closeTeacherLogin() {
+      const modal = document.getElementById('teacherLoginModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.getElementById('teacherPassword').value = '';
+    }
+
+    async function loginTeacher(event) {
+      event.preventDefault();
+      const input = document.getElementById('teacherPassword');
+      const error = document.getElementById('teacherLoginError');
+      const button = document.getElementById('teacherLoginButton');
+      button.disabled = true;
+      button.textContent = 'جاري التحقق...';
+
+      try {
+        const valid = await TeacherAuth.verifyPassword(input.value);
+        if (!valid) {
+          error.textContent = 'كلمة المرور غير صحيحة.';
+          error.classList.remove('hidden');
+          input.value = '';
+          input.focus();
+          return;
+        }
+
+        error.classList.add('hidden');
+        closeTeacherLogin();
+        teacherManagementEnabled = true;
+        updateTeacherManagementUI();
+        applyFilterAndSort();
+      } catch (err) {
+        error.textContent = `تعذر التحقق من كلمة المرور: ${err.message}`;
+        error.classList.remove('hidden');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'دخول';
+      }
+    }
+
+    function saveManagerToken() {
+      const token = document.getElementById('managerGitHubToken').value.trim();
+      if (!token) {
+        setTeacherStatus('أدخل رمز GitHub أولاً.', true);
+        return;
+      }
+      localStorage.setItem('gh_teacher_token', token);
+      setTeacherStatus('تم حفظ الرمز محلياً. جاري تحديث قائمة النماذج...');
+      loadQuizzesFromGitHub(token);
+    }
+
+    function getManagerToken() {
+      const tokenInput = document.getElementById('managerGitHubToken');
+      const token = tokenInput.value.trim() || localStorage.getItem('gh_teacher_token') || '';
+      if (token) {
+        tokenInput.value = token;
+        localStorage.setItem('gh_teacher_token', token);
+      }
+      if (!token) setTeacherStatus('أدخل رمز GitHub في شريط إدارة المعلم أولاً.', true);
+      return token;
+    }
+
+    function githubHeaders(token) {
+      return { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' };
+    }
+
+    function formApiUrl(fileName) {
+      return `${githubRepoApi}/contents/forms/${encodeURIComponent(fileName)}`;
+    }
+
+    async function githubError(response) {
+      try {
+        const data = await response.json();
+        return data.message || `طلب GitHub لم ينجح (${response.status}).`;
+      } catch {
+        return `طلب GitHub لم ينجح (${response.status}).`;
+      }
+    }
+
+    async function editFormFile(fileName) {
+      const token = getManagerToken();
+      if (!token) return;
+
+      setTeacherStatus(`جاري تحميل ${fileName}...`);
+      try {
+        const response = await fetch(formApiUrl(fileName), { headers: githubHeaders(token) });
+        if (!response.ok) throw new Error(await githubError(response));
+        const file = await response.json();
+        if (!file.content || !file.sha) throw new Error('تعذر قراءة محتوى الملف أو بياناته من GitHub.');
+
+        const binary = atob(file.content.replace(/\s/g, ''));
+        const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+        document.getElementById('formEditorSource').value = new TextDecoder().decode(bytes);
+        document.getElementById('formEditorName').textContent = fileName;
+        document.getElementById('formEditorStatus').textContent = 'سيتم حفظ محتوى HTML مباشرة في GitHub.';
+        editingForm = { fileName, sha: file.sha };
+        const modal = document.getElementById('formEditorModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } catch (error) {
+        setTeacherStatus(`تعذر فتح النموذج: ${error.message}`, true);
+      }
+    }
+
+    async function saveEditedForm() {
+      if (!editingForm) return;
+      const token = getManagerToken();
+      if (!token) return;
+      const content = document.getElementById('formEditorSource').value;
+      const status = document.getElementById('formEditorStatus');
+      const button = document.getElementById('formEditorSaveButton');
+      if (!content.trim()) {
+        status.textContent = 'لا يمكن حفظ ملف فارغ.';
+        status.className = 'text-xs text-rose-600';
+        return;
+      }
+
+      const form = editingForm;
+      button.disabled = true;
+      button.textContent = '⏳ جاري الحفظ...';
+      try {
+        const bytes = new TextEncoder().encode(content);
+        let binary = '';
+        bytes.forEach(byte => binary += String.fromCharCode(byte));
+        const response = await fetch(formApiUrl(form.fileName), {
+          method: 'PUT',
+          headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `Update form: ${form.fileName}`,
+            content: btoa(binary),
+            sha: form.sha
+          })
+        });
+        if (!response.ok) throw new Error(await githubError(response));
+        closeFormEditor();
+        setTeacherStatus(`تم حفظ التعديلات على ${form.fileName} بنجاح.`);
+      } catch (error) {
+        status.textContent = `تعذر حفظ النموذج: ${error.message}`;
+        status.className = 'text-xs text-rose-600';
+      } finally {
+        button.disabled = false;
+        button.textContent = '💾 حفظ التعديلات';
+      }
+    }
+
+    function closeFormEditor() {
+      const modal = document.getElementById('formEditorModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.getElementById('formEditorSource').value = '';
+      document.getElementById('formEditorName').textContent = '';
+      editingForm = null;
+    }
+
+    async function deleteFormFile(fileName) {
+      if (!confirm(`هل أنت متأكد من حذف النموذج "${fileName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
+      const token = getManagerToken();
+      if (!token) return;
+
+      setTeacherStatus(`جاري حذف ${fileName}...`);
+      try {
+        const fileResponse = await fetch(formApiUrl(fileName), { headers: githubHeaders(token) });
+        if (!fileResponse.ok) throw new Error(await githubError(fileResponse));
+        const file = await fileResponse.json();
+        const response = await fetch(formApiUrl(fileName), {
+          method: 'DELETE',
+          headers: { ...githubHeaders(token), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `Delete form: ${fileName}`, sha: file.sha })
+        });
+        if (!response.ok) throw new Error(await githubError(response));
+
+        allQuizzes = allQuizzes.filter(quiz => quiz.fileName !== fileName);
+        if (editingForm?.fileName === fileName) closeFormEditor();
+        applyFilterAndSort();
+        setTeacherStatus(`تم حذف ${fileName} بنجاح.`);
+      } catch (error) {
+        setTeacherStatus(`تعذر حذف النموذج: ${error.message}`, true);
+      }
     }
 
     function copyQuizLink(url) {
@@ -311,6 +607,7 @@
     }
 
     // التهيئة المبدئية والتحميل التلقائي
+    updateTeacherManagementUI();
     applyFilterAndSort();
     loadQuizzesFromGitHub();
   </script>
