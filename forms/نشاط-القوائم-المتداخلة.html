@@ -103,25 +103,24 @@
   <script>
     // جلب الإعدادات من ملف config.js أو localStorage
     const QUIZ_CONFIG = {
-  "gradeBadge": "ثاني متوسط - مادة المهارات الرقمية",
-  "quizTitle": "نشاط : الدوال",
-  "quizDesc": "اكتب المقطع البرمجي المطلوب لللسؤال واضغط على \"اختبار الكود\" للتحقق من المخرجات قبل الإرسال.",
+  "gradeBadge": "ثالث متوسط - مادة المهارات الرقمية",
+  "quizTitle": "نشاط:  القوائم المتداخلة",
+  "quizDesc": "أجب عن الأسئلة التالية واضغط على \"اختبار الحل\" للتحقق قبل الإرسال النهائي.",
+  "durationMinutes": 15,
+  "maxSubmissions": 0,
   "scriptUrl": "https://script.google.com/macros/s/AKfycbz6ZYOKioNLazDk1vjS-6O6yIOBoj0q2ypbS_ekEsOKVSfjZba2FMEoVdchSjIxbg6x7Q/exec",
   "questions": [
     {
-      "id": "q1793997836255",
+      "id": "q1794578010348",
       "type": "code",
       "title": "السؤال 1: كتابة كود بايثون",
       "score": 5,
-      "description": "اكتب برنامجًا بلغة بايثون يتضمن إنشاء دالة باسم <code>calculate_factorial </code>تستقبل معاملًا واحدًا يمثل عددًا صحيحًا موجبًا (n). تقوم الدالة بحساب مضروب العدد  وطباعة الناتج مباشرة داخل الدالة، ثم قم باستدعاء الدالة لإيجاد مضروب العدد 5.",
+      "description": "<div dir=\"rtl\"><p>لديك قائمة متداخلة باسم <code>grades</code> تحتوي على درجات طالبين في مادتي (الرياضيات والعلوم)، بحيث يمثل كل عنصر داخلي بيانات طالب واحد على النحو التالي:</p><pre dir=\"ltr\"><code>grades = [\n    [\"sami\", 95, 88],\n    [\"ali\", 92, 98]\n]</code></pre><p><strong>اكتب برنامجًا بلغة بايثون يقوم بالآتي:</strong></p><p>1. طباعة اسم الطالب الثاني ودرجته في العلوم.</p><p>2. تعديل درجة الطالب الأول في مادة العلوم من <code>88</code> إلى <code>90</code>.</p><p>3. طباعة قائمة الطالب الأول كاملة للتحقق من التغيير.</p></div>",
       "placeholder": "# اكتب الكود هنا",
-      "requiredKeyword": "calculate_factorial",
-      "expectedOutput": "25",
-      "mockInputs": "5\n4"
+      "requiredKeyword": "",
+      "expectedOutput": "ali\n98\n['sami', 95, 90]\n"
     }
-  ],
-  "durationMinutes": 15,
-  "maxSubmissions": 1
+  ]
 };
     const SCRIPT_URL = QUIZ_CONFIG.scriptUrl;
 
