@@ -26,6 +26,10 @@
           <h1 class="text-2xl font-bold text-slate-800">لوحة تحكم إعدادات الاختبار</h1>
         </div>
         <p class="text-sm text-slate-500 mt-1">تعديل محتوى الاختبار، العناوين، الأسئلة، الدرجات، وتوليد كود Google Sheets تلقائياً.</p>
+        <div id="editingBadge" class="hidden mt-2 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-800 text-xs font-bold rounded-lg border border-amber-200">
+          <span>✏️ أنت الآن تقوم بتعديل النموذج المباشر:</span>
+          <span id="editingFileName" class="font-mono text-indigo-700 dir-ltr"></span>
+        </div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <a href="portal.html" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-xl transition flex items-center gap-1 shadow-sm border border-indigo-200">
@@ -124,8 +128,11 @@
       <!-- Actions -->
       <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
         <div class="flex items-center gap-3 flex-wrap">
-          <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow transition">
+          <button type="submit" id="saveBtn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow transition">
             💾 حفظ التعديلات
+          </button>
+          <button type="button" id="saveDirectGithubBtn" onclick="saveAndPublishDirectToGitHub()" class="hidden px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition text-sm flex items-center gap-1.5">
+            <span>🚀</span> حفظ ونشر التعديل إلى GitHub مباشرة
           </button>
           <button type="button" onclick="exportQuizJSON()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl transition text-sm flex items-center gap-1.5 shadow-sm">
             <span>📥</span> تصدير ملف (JSON)
@@ -684,8 +691,131 @@ function doPost(e) {
         .replace(/'/g, "&#039;");
     }
 
+    // فحص ما إذا كانت الصفحة مفتوحة لتعديل نموذج محدد من البوابة
+    let activeEditingFileName = null;
+
+    function checkForFormEditParam() {
+      const params = new URLSearchParams(window.location.search);
+      const formFile = params.get('editForm');
+      if (formFile) {
+        activeEditingFileName = formFile;
+        loadFormFromGitHubToEdit(formFile);
+      }
+    }
+
+    async function loadFormFromGitHubToEdit(fileName) {
+      const badge = document.getElementById('editingBadge');
+      const nameSpan = document.getElementById('editingFileName');
+      const ghBtn = document.getElementById('saveDirectGithubBtn');
+
+      badge.classList.remove('hidden');
+      nameSpan.innerText = fileName;
+      if (ghBtn) ghBtn.classList.remove('hidden');
+
+      try {
+        const repoOwner = "t764720";
+        const repoName = "exams-control";
+        const res = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms/${encodeURIComponent(fileName)}?t=${Date.now()}`);
+        if (!res.ok) throw new Error("تعذر جلب النموذج من GitHub");
+        const data = await res.json();
+        
+        const binString = atob(data.content.replace(/\s/g, ''));
+        const bytes = Uint8Array.from(binString, m => m.charCodeAt(0));
+        const html = new TextDecoder().decode(bytes);
+
+        const m = html.match(/const QUIZ_CONFIG = (\{[\s\S]*?\});\s*const SCRIPT_URL/);
+        if (m) {
+          currentConfig = JSON.parse(m[1]);
+          initForm();
+          const alertBox = document.getElementById('saveAlert');
+          alertBox.classList.remove('hidden');
+          document.getElementById('alertMsg').innerText = `تم تحميل أسئلة النموذج "${fileName}" بنجاح! يمكنك الآن تعديل أي سؤال وحفظه مباشرة.`;
+        }
+      } catch (err) {
+        alert("حدث خطأ أثناء تحميل النموذج: " + err.message);
+      }
+    }
+
+    async function saveAndPublishDirectToGitHub() {
+      if (!activeEditingFileName) return;
+
+      const token = localStorage.getItem('gh_teacher_token');
+      if (!token) {
+        const promptToken = prompt("أدخل رمز GitHub Personal Access Token لإتمام الحفظ والنشر التلقائي:");
+        if (!promptToken) return;
+        localStorage.setItem('gh_teacher_token', promptToken.trim());
+      }
+
+      const activeToken = localStorage.getItem('gh_teacher_token');
+      const btn = document.getElementById('saveDirectGithubBtn');
+      btn.disabled = true;
+      btn.innerHTML = `<span>⏳</span> جاري الحفظ والنشر إلى GitHub...`;
+
+      try {
+        // 1. تحديث الكائن الحالي من الحقول
+        currentConfig.gradeBadge = document.getElementById('gradeBadge').value.trim();
+        currentConfig.quizTitle = document.getElementById('quizTitle').value.trim();
+        currentConfig.durationMinutes = Number(document.getElementById('durationMinutes').value) || 0;
+        currentConfig.maxSubmissions = Number(document.getElementById('maxSubmissions').value) || 0;
+        currentConfig.quizDesc = document.getElementById('quizDesc').value.trim();
+        currentConfig.scriptUrl = document.getElementById('scriptUrl').value.trim();
+
+        // 2. جلب قالب صفحة الاختبار وتوليد HTML جديد
+        const repoOwner = "t764720";
+        const repoName = "exams-control";
+        const tplRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/index.html?t=${Date.now()}`);
+        if (!tplRes.ok) throw new Error("تعذر جلب قالب الاختبار الأساسي");
+        const tplData = await tplRes.json();
+        const tplBin = atob(tplData.content.replace(/\s/g, ''));
+        const tplBytes = Uint8Array.from(tplBin, m => m.charCodeAt(0));
+        let templateHtml = new TextDecoder().decode(tplBytes);
+
+        templateHtml = templateHtml.replace(/<script src="config\.js"><\/script>\r?\n?/, "");
+        templateHtml = templateHtml.replace("const QUIZ_CONFIG = getQuizConfig();", "const QUIZ_CONFIG = " + JSON.stringify(currentConfig, null, 2) + ";");
+
+        // 3. جلب sha للملف المستهدف
+        const fileRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms/${encodeURIComponent(activeEditingFileName)}`, {
+          headers: { "Authorization": `Bearer ${activeToken}`, "Accept": "application/vnd.github.v3+json" }
+        });
+        if (!fileRes.ok) throw new Error("تعذر الوصول لبيانات الملف على GitHub");
+        const fileJson = await fileRes.json();
+
+        // 4. تشفير UTF-8 لـ Base64
+        const utf8Bytes = new TextEncoder().encode(templateHtml);
+        let bin = '';
+        utf8Bytes.forEach(b => bin += String.fromCharCode(b));
+        const base64Content = btoa(bin);
+
+        // 5. إرسال طلب التحديث PUT
+        const putRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/forms/${encodeURIComponent(activeEditingFileName)}`, {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${activeToken}`,
+            "Accept": "application/vnd.github.v3+json",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: `Update quiz form: ${activeEditingFileName} via Admin Visual Editor`,
+            content: base64Content,
+            sha: fileJson.sha
+          })
+        });
+
+        if (!putRes.ok) throw new Error("فشل إرسال التحديث لـ GitHub");
+
+        alert(`✔ تم حفظ ونشر التعديلات بنجاح إلى النموذج "${activeEditingFileName}" على GitHub!\n\nسيتم نقلك الآن إلى بوابة الاختبارات.`);
+        window.location.href = "portal.html";
+
+      } catch (err) {
+        alert("حدث خطأ أثناء الحفظ على GitHub: " + err.message);
+        btn.disabled = false;
+        btn.innerHTML = `<span>🚀</span> حفظ ونشر التعديل إلى GitHub مباشرة`;
+      }
+    }
+
     // التهيئة عند فتح الصفحة
     initForm();
+    checkForFormEditParam();
   </script>
 </body>
 </html>

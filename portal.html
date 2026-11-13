@@ -489,29 +489,9 @@
       }
     }
 
-    async function editFormFile(fileName) {
-      const token = getManagerToken();
-      if (!token) return;
-
-      setTeacherStatus(`جاري تحميل ${fileName}...`);
-      try {
-        const response = await fetch(formApiUrl(fileName), { headers: githubHeaders(token) });
-        if (!response.ok) throw new Error(await githubError(response));
-        const file = await response.json();
-        if (!file.content || !file.sha) throw new Error('تعذر قراءة محتوى الملف أو بياناته من GitHub.');
-
-        const binary = atob(file.content.replace(/\s/g, ''));
-        const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-        document.getElementById('formEditorSource').value = new TextDecoder().decode(bytes);
-        document.getElementById('formEditorName').textContent = fileName;
-        document.getElementById('formEditorStatus').textContent = 'سيتم حفظ محتوى HTML مباشرة في GitHub.';
-        editingForm = { fileName, sha: file.sha };
-        const modal = document.getElementById('formEditorModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-      } catch (error) {
-        setTeacherStatus(`تعذر فتح النموذج: ${error.message}`, true);
-      }
+    function editFormFile(fileName) {
+      // فتح النموذج في محرر لوحة التحكم المرئي المتكامل مباشرة
+      window.location.href = `admin.html?editForm=${encodeURIComponent(fileName)}`;
     }
 
     async function saveEditedForm() {
