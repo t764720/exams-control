@@ -172,9 +172,23 @@
       }
     };
 
+    // سجل التواريخ الموثوقة لإنشاء النماذج (تاريخ الميلاد الأصلي لكل نموذج)
+    const KNOWN_CREATION_DATES = {
+      "نشاط-القوائم-المتداخلة.html": 1794579309000,
+      "نشاط-الدوال-في-بايثون.html": 1794578224000,
+      "نشاط-المعاملات-في-بايثون.html": 1794061442000,
+      "input-quiz.html": 1794058343000,
+      "nested_loops.html": 1794002615000,
+      "loops_quiz.html": 1794000226000,
+      "nested_lists.html": 1794000098000,
+      "python-intro.html": 1794000098000,
+      "variables_quiz.html": 1794000098000
+    };
+
     let allQuizzes = Object.keys(KNOWN_METADATA).map(fileName => ({
       file: `forms/${fileName}`,
       fileName,
+      date: KNOWN_CREATION_DATES[fileName] || 0,
       ...KNOWN_METADATA[fileName]
     }));
     let teacherManagementEnabled = TeacherAuth.isAuthenticated();
@@ -207,13 +221,14 @@
               desc: meta.desc || "اختبار متاح للطلاب عبر بوابة الاختبارات.",
               duration: meta.duration || 15,
               icon: meta.icon || "📝",
+              date: KNOWN_CREATION_DATES[fileName] || 0,
               orderIndex: index // لحفظ ترتيب الاكتشاف
             };
           });
 
           allQuizzes = syncedList;
 
-          // جلب تواريخ التعديل لفرز زمني فوري (يعمل حتى بدون توكن في حدود 60 طلب/ساعة)
+          // جلب تواريخ الإنشاء/الكوميت الأولى لأي نموذج جديد غير مسجل في القائمة
           fetchFileCommitDates(syncedList, token);
 
           applyFilterAndSort();
@@ -232,11 +247,15 @@
 
     // جلب تواريخ الالتزامات (Commits) للملفات لفرز زمني دقيق دون التأثير على سرعة التحميل
     function fetchFileCommitDates(list, token) {
+      // إذا كانت التواريخ معروفة مسبقاً لكل العناصر لا داعي للاستدعاء الخارجي
+      const unknownDates = list.filter(q => !q.date);
+      if (unknownDates.length === 0) return;
+
       const repoOwner = "t764720";
       const repoName = "exams-control";
       const headers = githubHeaders(token);
 
-      list.forEach(async q => {
+      unknownDates.forEach(async q => {
         try {
           const response = await fetch(
             `https://api.github.com/repos/${repoOwner}/${repoName}/commits?path=${encodeURIComponent(q.file)}&per_page=1`,
