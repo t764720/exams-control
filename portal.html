@@ -213,7 +213,8 @@
 
           allQuizzes = syncedList;
 
-          if (token) fetchFileCommitDates(syncedList, token);
+          // جلب تواريخ التعديل لفرز زمني فوري (يعمل حتى بدون توكن في حدود 60 طلب/ساعة)
+          fetchFileCommitDates(syncedList, token);
 
           applyFilterAndSort();
           if (token || reportErrors) setTeacherStatus(`تم تحديث القائمة: ${syncedList.length} نموذج.`);
