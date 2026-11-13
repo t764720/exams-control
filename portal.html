@@ -48,6 +48,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button onclick="saveManagerToken()" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-200">حفظ الرمز</button>
+          <button onclick="refreshTeacherForms()" class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-200">تحديث النماذج</button>
           <button onclick="toggleTeacherManagement()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl">إنهاء الإدارة</button>
         </div>
       </div>
@@ -182,7 +183,7 @@
 
     // جلب القائمة الحقيقية المباشرة من مجلد forms على GitHub
     // بحيث إذا تم حذف أو إضافة أي اختبار يتم تحديث البوابة بدقة متطابقة
-    async function loadQuizzesFromGitHub(token = '') {
+    async function loadQuizzesFromGitHub(token = '', reportErrors = false) {
       try {
         const repoOwner = "t764720";
         const repoName = "exams-control";
@@ -212,15 +213,15 @@
 
           allQuizzes = syncedList;
 
-          // محاولة جلب أحدث تاريخ تعديل لكل ملف في الخلفية لدقة الفرز الزمني
-          fetchFileCommitDates(syncedList);
+          if (token) fetchFileCommitDates(syncedList, token);
 
           applyFilterAndSort();
-        } else if (token) {
+          if (token || reportErrors) setTeacherStatus(`تم تحديث القائمة: ${syncedList.length} نموذج.`);
+        } else if (token || reportErrors) {
           throw new Error(await githubError(res));
         }
       } catch (e) {
-        if (token) {
+        if (token || reportErrors) {
           setTeacherStatus(`تعذر تحديث قائمة النماذج من GitHub: ${e.message}`, true);
         } else {
           console.log("Could not auto-fetch from GitHub API:", e);
@@ -229,37 +230,29 @@
     }
 
     // جلب تواريخ الالتزامات (Commits) للملفات لفرز زمني دقيق دون التأثير على سرعة التحميل
-    async function fetchFileCommitDates(list) {
-      try {
-        const repoOwner = "t764720";
-        const repoName = "exams-control";
-        
-        // جلب آخر 30 كوميت للمجلد
-        const commitsRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?path=forms&per_page=30`);
-        if (!commitsRes.ok) return;
-        const commits = await commitsRes.json();
+    function fetchFileCommitDates(list, token) {
+      const repoOwner = "t764720";
+      const repoName = "exams-control";
+      const headers = githubHeaders(token);
 
-        // مطابقة الكوميتات
-        // إذا كان هناك ملف مضاف حديثاً أو تم توليده، يمكننا أيضاً فحص كل ملف على حدة إذا لزم
-        list.forEach(async (q) => {
-          try {
-            const fRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?path=${q.file}&per_page=1`);
-            if (fRes.ok) {
-              const fCommits = await fRes.json();
-              if (fCommits && fCommits.length > 0 && fCommits[0].commit && fCommits[0].commit.committer) {
-                q.date = new Date(fCommits[0].commit.committer.date).getTime();
-                // إعادة تطبيق الترتيب إذا كان المستخدم يختار الأحدث
-                const currentSort = document.getElementById('sortSelect')?.value;
-                if (currentSort === 'newest' || currentSort === 'oldest') {
-                  applyFilterAndSort();
-                }
-              }
-            }
-          } catch (err) {}
-        });
-      } catch (e) {
-        console.log("Date fetch non-critical error:", e);
-      }
+      list.forEach(async q => {
+        try {
+          const response = await fetch(
+            `https://api.github.com/repos/${repoOwner}/${repoName}/commits?path=${encodeURIComponent(q.file)}&per_page=1`,
+            { headers }
+          );
+          if (!response.ok) return;
+          const commits = await response.json();
+          const commitDate = commits[0]?.commit?.committer?.date;
+          if (!commitDate) return;
+
+          q.date = new Date(commitDate).getTime();
+          const currentSort = document.getElementById('sortSelect')?.value;
+          if (currentSort === 'newest' || currentSort === 'oldest') applyFilterAndSort();
+        } catch (error) {
+          console.warn(`Could not load modification date for ${q.file}:`, error);
+        }
+      });
     }
 
     function applyFilterAndSort() {
@@ -383,6 +376,14 @@
       }
     }
 
+    function enableTeacherManagement() {
+      teacherManagementEnabled = true;
+      updateTeacherManagementUI();
+      applyFilterAndSort();
+      const token = localStorage.getItem('gh_teacher_token') || '';
+      if (token) loadQuizzesFromGitHub(token);
+    }
+
     function toggleTeacherManagement() {
       if (teacherManagementEnabled) {
         teacherManagementEnabled = false;
@@ -392,9 +393,7 @@
       }
 
       if (TeacherAuth.isAuthenticated()) {
-        teacherManagementEnabled = true;
-        updateTeacherManagementUI();
-        applyFilterAndSort();
+        enableTeacherManagement();
         return;
       }
 
@@ -432,9 +431,7 @@
 
         error.classList.add('hidden');
         closeTeacherLogin();
-        teacherManagementEnabled = true;
-        updateTeacherManagementUI();
-        applyFilterAndSort();
+        enableTeacherManagement();
       } catch (err) {
         error.textContent = `تعذر التحقق من كلمة المرور: ${err.message}`;
         error.classList.remove('hidden');
@@ -453,6 +450,14 @@
       localStorage.setItem('gh_teacher_token', token);
       setTeacherStatus('تم حفظ الرمز محلياً. جاري تحديث قائمة النماذج...');
       loadQuizzesFromGitHub(token);
+    }
+
+    function refreshTeacherForms() {
+      const token = document.getElementById('managerGitHubToken').value.trim()
+        || localStorage.getItem('gh_teacher_token')
+        || '';
+      setTeacherStatus('جاري تحديث قائمة النماذج من GitHub...');
+      loadQuizzesFromGitHub(token, true);
     }
 
     function getManagerToken() {
@@ -609,7 +614,7 @@
     // التهيئة المبدئية والتحميل التلقائي
     updateTeacherManagementUI();
     applyFilterAndSort();
-    loadQuizzesFromGitHub();
+    loadQuizzesFromGitHub(teacherManagementEnabled ? localStorage.getItem('gh_teacher_token') || '' : '');
   </script>
 </body>
 </html>
